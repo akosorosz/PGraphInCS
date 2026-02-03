@@ -4,6 +4,9 @@ using static PGraphInCS.CommonImplementations;
 
 namespace PGraphInCS.LinearPNS.Efficient;
 
+/// <summary>
+/// Special material node with data for flow rate limit and unit price. Used for the linear model employed by P-Graph Studio.
+/// </summary>
 public class LinearMaterialNode : MaterialNode
 {
     public double FlowRateLowerBound { get; set; }
@@ -20,6 +23,9 @@ public class LinearMaterialNode : MaterialNode
     }
 }
 
+/// <summary>
+/// Special operating unit node with data for capacity limits and cost functions. Used for the linear model employed by P-Graph Studio.
+/// </summary>
 public class LinearOperatingUnitNode : OperatingUnitNode
 {
     public double CapacityLowerBound { get; set; }
@@ -85,8 +91,17 @@ public class LinearOperatingUnitNode : OperatingUnitNode
     }
 }
 
+/// <summary>
+/// Special PNS problem class for the compatibility with the linear model of P-Graph Studio.
+/// </summary>
 public class LinearPNSProblem : PNSProblem<LinearMaterialNode, LinearOperatingUnitNode>
 {
+    /// <summary>
+    /// Load the problem from P-Graph Studio file (.pgsx)
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
     public static LinearPNSProblem FromPGraphStudioFile(string filename)
     {
         LinearPNSProblem graph = new LinearPNSProblem();
@@ -251,6 +266,12 @@ public class LinearPNSProblem : PNSProblem<LinearMaterialNode, LinearOperatingUn
         MutualExclusions
     }
 
+    /// <summary>
+    /// Loads the problem from P-Graph Studio's input file used by its underlying solver (.in)
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
     public static LinearPNSProblem FromPgraphSolverInputFile(string filename)
     {
         LinearPNSProblem graph = new LinearPNSProblem();
@@ -443,6 +464,11 @@ public class LinearPNSProblem : PNSProblem<LinearMaterialNode, LinearOperatingUn
         return graph;
     }
 
+    /// <summary>
+    /// Exports problem to P-Graph Studio file (.pgsx). Can also export solutions (the solutions should be from the same problem).
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <param name="solutions"></param>
     public void ExportToPGraphStudioFile(string filename, IEnumerable<LinearNetwork>? solutions = null)
     {
         // initialization
@@ -858,6 +884,10 @@ public class LinearPNSProblem : PNSProblem<LinearMaterialNode, LinearOperatingUn
         document.Save(filename);
     }
 
+    /// <summary>
+    /// Exports problem to P-Graph Studio's input file used by its underlying solver (.in)
+    /// </summary>
+    /// <param name="filename"></param>
     public void ExportToPgraphSolverInputFile(string filename)
     {
         using (StreamWriter writer = new StreamWriter(filename))
@@ -980,6 +1010,12 @@ public class LinearPNSProblem : PNSProblem<LinearMaterialNode, LinearOperatingUn
         }
     }
 
+    /// <summary>
+    /// Add solutions to a P-Graph Studio file (.pgsx). Solutions should only be added the a file containing the same problem.
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <param name="solutions"></param>
+    /// <exception cref="ArgumentException"></exception>
     public void AddSolutionsToPGraphStudioFile(string filename, IEnumerable<LinearNetwork> solutions)
     {
         LinearPNSProblem graph = new LinearPNSProblem();
@@ -1079,6 +1115,9 @@ public class LinearPNSProblem : PNSProblem<LinearMaterialNode, LinearOperatingUn
     }
 }
 
+/// <summary>
+/// Special network class to represent solutions of the linear P-graph (for consistency with P-Graph Studio)
+/// </summary>
 public class LinearNetwork : SimpleNetwork
 {
     public Dictionary<OperatingUnitNode, double> UnitCapacities { get; } = new();
@@ -1090,6 +1129,9 @@ public class LinearNetwork : SimpleNetwork
     }
 }
 
+/// <summary>
+/// Linear programming model for the bounding of subproblems. Implements the model used by P-Graph Studio.
+/// </summary>
 public class SimpleLinearPNSLPModel
 {
     //Variable[] _unitSizeVars;

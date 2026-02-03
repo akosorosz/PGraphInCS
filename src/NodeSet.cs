@@ -27,6 +27,8 @@ public class NodeSet<NodeType> : ICollection<NodeType>
     public bool Remove(NodeType item) => _internalStorage.Remove(item);
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+    public void AddRange(IEnumerable<NodeType> items) => _internalStorage.UnionWith(items);
+
     public void ExceptWith(IEnumerable<NodeType> other) => _internalStorage.ExceptWith(other);
     public void IntersectWith(IEnumerable<NodeType> other) => _internalStorage.IntersectWith(other);
     public void UnionWith(IEnumerable<NodeType> other) => _internalStorage.UnionWith(other);
@@ -106,4 +108,50 @@ public class NodeSet<NodeType> : ICollection<NodeType>
         get => _internalStorage.First(m => m.Name == name);
     }
 
+}
+
+/// <summary>
+/// Class to generate power set of NodeSets
+/// </summary>
+/// <typeparam name="NodeType">Type of the items in the original set</typeparam>
+public class NodePowerSet<NodeType>
+    where NodeType : GraphNode
+{
+    /// <summary>
+    /// Generate subsets of a set with exactly a given number of items. 
+    /// </summary>
+    /// <typeparam name="SetType">Type of set to return</typeparam>
+    /// <param name="data">Original set</param>
+    /// <param name="maxItemCount">Item count for subsets. If less than 0, will be considered as 0. If gretear than item count of original set, will be considered as item count of original set.</param>
+    /// <returns></returns>
+    public static IEnumerable<SetType> GetCombinations<SetType>(SetType data, int numberOfItems)
+        where SetType : NodeSet<NodeType>, new()
+    {
+        int itemCount = Math.Min(data.Count(), Math.Max(0, numberOfItems));
+        int maxStartIndex = data.Count() - itemCount;
+        if (itemCount == 0) return new List<SetType> { new SetType() };
+        else return Enumerable.Range(0, maxStartIndex + 1).SelectMany(i => GetCombinationsInner(data.Skip(i + 1), itemCount - 1).Select(c => { SetType result = new(); result.AddRange(data.Skip(i).Take(1).Concat(c)); return result; }));
+    }
+    private static IEnumerable<IEnumerable<NodeType>> GetCombinationsInner(IEnumerable<NodeType> data, int numberOfItems)
+    {
+        int itemCount = Math.Min(data.Count(), Math.Max(0, numberOfItems));
+        int maxStartIndex = data.Count() - itemCount;
+        if (itemCount == 0) return new List<IEnumerable<NodeType>> { Enumerable.Empty<NodeType>() };
+        else return Enumerable.Range(0, maxStartIndex + 1).SelectMany(i => GetCombinationsInner(data.Skip(i + 1), itemCount - 1).Select(c => data.Skip(i).Take(1).Concat(c)));
+    }
+
+    /// <summary>
+    /// Generates the complete power set, or just subsets up to a certain item count
+    /// </summary>
+    /// <typeparam name="SetType">Type of set to return</typeparam>
+    /// <param name="data">Original set</param>
+    /// <param name="maxItemCount">Item count upper bound. Default: -1 (generate all subsets).</param>
+    /// <returns></returns>
+    public static IEnumerable<SetType> GetPowerSet<SetType>(SetType data, int maxItemCount = -1)
+        where SetType : NodeSet<NodeType>, new()
+    {
+        int itemCount = maxItemCount == -1 ? data.Count() : Math.Min(data.Count(), Math.Max(0, maxItemCount));
+        if (itemCount == 0) return new List<SetType> { new SetType() };
+        else return GetPowerSet(data, itemCount - 1).Concat(GetCombinations(data, itemCount));
+    }
 }

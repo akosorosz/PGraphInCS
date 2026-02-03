@@ -6,8 +6,15 @@ using System.Threading.Tasks;
 
 namespace PGraphInCS;
 
+/// <summary>
+/// Static class containing classes and methods implementing common algorithms.
+/// </summary>
 public static class CommonImplementations
 {
+    /// <summary>
+    /// Subproblem specifically designed for Algorithm ABB of the P-graph framework (choose a material, decide which units to include to produce it)
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
     public class ABBSubproblem<PNSProblemType> : SubproblemBase<PNSProblemType>, ISubpoblemWithIncludedExcludedGetSet, ISubproblemInitializer<PNSProblemType, ABBSubproblem<PNSProblemType>>
     where PNSProblemType : PNSProblemBase
     {
@@ -35,6 +42,13 @@ public static class CommonImplementations
         public void SetIncludedUnits(OperatingUnitSet units) => Included = units.Clone();
         public void SetExcludedUnits(OperatingUnitSet units) => Excluded = units.Clone();
     }
+
+    /// <summary>
+    /// Branching algorithm specifically designed for Algorithm ABB of the P-graph framework (choose a material, decide which units to include to produce it)
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+    /// <param name="subproblem">Subproblem to be branched</param>
+    /// <returns>Collection of child subproblems</returns>
     public static IEnumerable<ABBSubproblem<PNSProblemType>> ABBBranching<PNSProblemType>(ABBSubproblem<PNSProblemType> subproblem)
         where PNSProblemType : PNSProblemBase
     {
@@ -49,8 +63,8 @@ public static class CommonImplementations
             yield break;
         }
         IEnumerable<OperatingUnitSet> pwset;
-        if (maxparallel == -1) pwset = PowerSet.GetPowerSet(canProduceSelectedMaterialNew).Select(u => new OperatingUnitSet(u));
-        else pwset = PowerSet.GetPowerSet(canProduceSelectedMaterialNew, maxparallel - alreadyProducingMaterial.Count).Select(u => new OperatingUnitSet(u));
+        if (maxparallel == -1) pwset = NodePowerSet<OperatingUnitNode>.GetPowerSet(canProduceSelectedMaterialNew);
+        else pwset = NodePowerSet<OperatingUnitNode>.GetPowerSet(canProduceSelectedMaterialNew, maxparallel - alreadyProducingMaterial.Count);
         foreach (OperatingUnitSet newUnits in pwset)
         {
             if (newUnits.Count == 0 && ignoreEmptySet) continue;
@@ -72,6 +86,11 @@ public static class CommonImplementations
             }
         }
     }
+
+    /// <summary>
+    /// Subproblem specifically designed for branching base on binary decisions (choose an operating unit, either include it or exclude it)
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
     public class BinaryDecisionSubproblem<PNSProblemType> : SubproblemBase<PNSProblemType>, ISubpoblemWithIncludedExcludedGetSet, ISubproblemInitializer<PNSProblemType, BinaryDecisionSubproblem<PNSProblemType>>
     where PNSProblemType : PNSProblemBase
     {
@@ -105,6 +124,13 @@ public static class CommonImplementations
             Undecided = Problem.OperatingUnits.Except(Included.Union(Excluded));
         }
     }
+
+    /// <summary>
+    /// Branching algorithm specifically designed for branching base on binary decisions (choose an operating unit, either include it or exclude it)
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+    /// <param name="subproblem">Subproblem to be branched</param>
+    /// <returns>Collection of child subproblems</returns>
     public static IEnumerable<BinaryDecisionSubproblem<PNSProblemType>> BinaryDecisionBranching<PNSProblemType>(BinaryDecisionSubproblem<PNSProblemType> subproblem)
         where PNSProblemType : PNSProblemBase
     {
@@ -113,6 +139,12 @@ public static class CommonImplementations
         yield return new BinaryDecisionSubproblem<PNSProblemType>(subproblem.Problem, subproblem.BaseUnitSet, subproblem.Included, subproblem.Excluded.Union(unit));
     }
 
+    /// <summary>
+    /// Reduced Structure Generator (RSG) algorithm to reduce the free part during branching. Can be employed on any subproblem which keeps track of the included and the excluded operating units.
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+    /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+    /// <param name="subproblem">Subproblem (is modified by the method)</param>
     public static void ReducedStructureGenerator<PNSProblemType, SubproblemType>(SubproblemType subproblem)
         where PNSProblemType : PNSProblemBase
         where SubproblemType : SubproblemBase<PNSProblemType>, ISubpoblemWithIncludedExcludedGetSet
@@ -124,6 +156,13 @@ public static class CommonImplementations
         excluded.UnionWith(baseSet.Except(rsgUnits));
         subproblem.SetExcludedUnits(excluded);
     }
+
+    /// <summary>
+    /// Neutral extension algorithm to reduce the free part during branching. Can be employed on any subproblem which keeps track of the included and the excluded operating units.
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+    /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+    /// <param name="subproblem">Subproblem (is modified by the method)</param>
     public static void NeutralExtension<PNSProblemType, SubproblemType>(SubproblemType subproblem)
         where PNSProblemType : PNSProblemBase
         where SubproblemType : SubproblemBase<PNSProblemType>, ISubpoblemWithIncludedExcludedGetSet
@@ -150,6 +189,13 @@ public static class CommonImplementations
         subproblem.SetIncludedUnits(included);
         subproblem.SetExcludedUnits(excluded);
     }
+
+    /// <summary>
+    /// Default branching extensions suggested to use with subproblems which keep track of the included and the excluded operating units.
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+    /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+    /// <returns>List of branching extensions</returns>
     public static List<Action<SubproblemType>> DefaultBranchingExtensions<PNSProblemType, SubproblemType>()
         where PNSProblemType : PNSProblemBase
         where SubproblemType : SubproblemBase<PNSProblemType>, ISubpoblemWithIncludedExcludedGetSet
@@ -159,6 +205,13 @@ public static class CommonImplementations
             NeutralExtension<PNSProblemType, SubproblemType>
         ];
     }
+
+    /// <summary>
+    /// Neutral extension algorithm specifically for Algorithm ABB.
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+    /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+    /// <param name="subproblem">Subproblem (is modified by the method)</param>
     public static void NeutralExtensionForABB<PNSProblemType, SubproblemType>(SubproblemType subproblem)
         where PNSProblemType : PNSProblemBase
         where SubproblemType : ABBSubproblem<PNSProblemType>
@@ -197,6 +250,13 @@ public static class CommonImplementations
             }
         }
     }
+
+    /// <summary>
+    /// Default branching extensions suggested for Algorithm ABB.
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+    /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+    /// <returns>List of branching extensions</returns>
     public static List<Action<SubproblemType>> DefaultBranchingExtensionsForABB<PNSProblemType, SubproblemType>()
         where PNSProblemType : PNSProblemBase
         where SubproblemType : ABBSubproblem<PNSProblemType>
@@ -206,6 +266,13 @@ public static class CommonImplementations
             NeutralExtensionForABB<PNSProblemType, SubproblemType>
         ];
     }
+
+    /// <summary>
+    /// Default bounding method the linear P-graphs (as used in P-Graph Studio). This method is for the implementation in LinearPNS.Efficient
+    /// </summary>
+    /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+    /// <param name="subproblem">Subproblem to perform bouding and feasibility test on</param>
+    /// <returns>Network representing the optimized, bounded solution of the subproblem, or null, if the subproblem is infeasible.</returns>
     public static LinearPNS.Efficient.LinearNetwork? LinearSubproblemBoundEfficient<SubproblemType>(SubproblemType subproblem)
         where SubproblemType : SubproblemBase<LinearPNS.Efficient.LinearPNSProblem>, ISubpoblemWithIncludedExcludedGet
     {
@@ -224,6 +291,13 @@ public static class CommonImplementations
         double totalcost = fixedcost + lpmodel.ObjectiveValue();
         return new LinearPNS.Efficient.LinearNetwork(unitsToUseInLp.ToDictionary(u => u, u => lpmodel.GetOptimizedCapacity(u)), totalcost);
     }
+
+    /// <summary>
+    /// Default bounding method the linear P-graphs (as used in P-Graph Studio). This method is for the implementation in LinearPNS.Flexible
+    /// </summary>
+    /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+    /// <param name="subproblem">Subproblem to perform bouding and feasibility test on</param>
+    /// <returns>Network representing the optimized, bounded solution of the subproblem, or null, if the subproblem is infeasible.</returns>
     public static LinearPNS.Flexible.LinearNetwork? LinearSubproblemBoundFlexible<SubproblemType>(SubproblemType subproblem)
         where SubproblemType : SubproblemBase<LinearPNS.Flexible.LinearPNSProblem>, ISubpoblemWithIncludedExcludedGet
     {
@@ -243,6 +317,11 @@ public static class CommonImplementations
         return new LinearPNS.Flexible.LinearNetwork(unitsToUseInLp.ToDictionary(u => u, u => lpmodel.GetOptimizedCapacity(u)), totalcost);
     }
 
+    /// <summary>
+    /// Algorithm ABB with recursive function implementation.
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+    /// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
     public class AlgorithmABBRecursive<PNSProblemType, NetworkType> : RecursiveBranchAndBoundAlgorithm<PNSProblemType, ABBSubproblem<PNSProblemType>, NetworkType>
         where PNSProblemType : PNSProblemBase
         where NetworkType : NetworkBase, IComparable<NetworkType>
@@ -255,6 +334,11 @@ public static class CommonImplementations
         }
     }
 
+    /// <summary>
+    /// Algorithm ABB with ordered open list implementation.
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+    /// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
     public class AlgorithmABBOrderedOpenList<PNSProblemType, NetworkType> : OrderedOpenListBranchAndBoundAlgorithm<PNSProblemType, ABBSubproblem<PNSProblemType>, NetworkType>
         where PNSProblemType : PNSProblemBase
         where NetworkType : NetworkBase, IComparable<NetworkType>
@@ -273,6 +357,11 @@ public static class CommonImplementations
         }
     }
 
+    /// <summary>
+    /// Algorithm ABB with LIFO open list implementation.
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+    /// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
     public class AlgorithmABBDepthFirstOpenList<PNSProblemType, NetworkType> : DepthFirstOpenListBranchAndBoundAlgorithm<PNSProblemType, ABBSubproblem<PNSProblemType>, NetworkType>
         where PNSProblemType : PNSProblemBase
         where NetworkType : NetworkBase, IComparable<NetworkType>

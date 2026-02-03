@@ -107,58 +107,6 @@ public class OperatingUnitSet : NodeSet<OperatingUnitNode>
         return new OperatingUnitSet(this.Where(u => u.Outputs.Intersect(materials).Any()));
     }
 }
-public class PowerSet
-{
-    // Netcode version, but the other generates better order (performance is a question)
-    //public static IEnumerable<IEnumerable<T>> GetPowerSet<T>(IEnumerable<T> data)
-    //{
-    //    List<T> list = new List<T>(data);
-    //    return from m in Enumerable.Range(0, 1 << list.Count)
-    //           select
-    //               from i in Enumerable.Range(0, list.Count)
-    //               where (m & (1 << i)) != 0
-    //               select list[i];
-    //}
-    //public static IEnumerable<IEnumerable<T>> GetPowerSet<T>(List<T> list)
-    //{
-    //    return from m in Enumerable.Range(0, 1 << list.Count)
-    //           select
-    //               from i in Enumerable.Range(0, list.Count)
-    //               where (m & (1 << i)) != 0
-    //               select list[i];
-    //}
-    public static IEnumerable<IEnumerable<T>> GetCombinations<T>(IEnumerable<T> data, int numberOfItems)
-    {
-        int itemCount = Math.Min(data.Count(), Math.Max(0, numberOfItems));
-        int maxStartIndex = data.Count() - itemCount;
-        if (itemCount == 0) return new List<IEnumerable<T>> { Enumerable.Empty<T>() };
-        else return Enumerable.Range(0, maxStartIndex + 1).SelectMany(i => GetCombinations<T>(data.Skip(i + 1), itemCount - 1).Select(c => data.Skip(i).Take(1).Concat(c)));
-    }
-    public static IEnumerable<IEnumerable<T>> GetPowerSet<T>(IEnumerable<T> data, int maxItemCount = -1)
-    {
-        int itemCount = maxItemCount==-1 ? data.Count() : Math.Min(data.Count(), Math.Max(0, maxItemCount));
-        if (itemCount == 0) return new List<IEnumerable<T>> { Enumerable.Empty<T>() };
-        else return GetPowerSet<T>(data, itemCount - 1).Concat(GetCombinations<T>(data, itemCount));
-    }
-}
-public class GraphNode
-{
-    private static Int32 GlobalId = 0;
-    public String Name { get; }
-    public Int32 Id { get; }
-    public Dictionary<string, object> AdditionalParameters { get; } = new Dictionary<string, object>();
-
-    public GraphNode(String name)
-    {
-        this.Id = ++GlobalId;
-        this.Name = name;
-    }
-
-    public override int GetHashCode()
-    {
-        return Id;
-    }
-}
 
 public class MaterialNode : GraphNode
 {
@@ -189,6 +137,9 @@ public class OperatingUnitNode : GraphNode
     }
 }
 
+/// <summary>
+/// Base class for PNS problem. Stores the materials and operating units of the problem, along with all necessary data.
+/// </summary>
 public abstract class PNSProblemBase
 {
     public MaterialSet Materials { get; } = new MaterialSet();
@@ -356,6 +307,12 @@ public abstract class PNSProblemBase
             MaxParallelProduction[material] = maxParallelProd;
     }
 }
+
+/// <summary>
+/// Generic base class for PNS problems restricting the types of material and operating unit classes
+/// </summary>
+/// <typeparam name="MaterialNodeType"></typeparam>
+/// <typeparam name="OperatingUnitNodeType"></typeparam>
 public abstract class PNSProblem<MaterialNodeType, OperatingUnitNodeType> : PNSProblemBase
     where MaterialNodeType : MaterialNode
     where OperatingUnitNodeType : OperatingUnitNode
@@ -378,5 +335,8 @@ public abstract class PNSProblem<MaterialNodeType, OperatingUnitNodeType> : PNSP
     }
 }
 
+/// <summary>
+/// Simple PNS problem class using the basic material and operating units classes
+/// </summary>
 public class SimplePNSProblem : PNSProblem<MaterialNode, OperatingUnitNode>
 { }

@@ -13,14 +13,25 @@ public abstract class AlgorithmBase<PNSProblemType>
     }
 }
 
+/// <summary>
+/// Implementation of Algorithm MSG of the P-graph framework
+/// </summary>
 public class AlgorithmMSG : AlgorithmBase<PNSProblemBase>
 {
     private OperatingUnitSet? _maximalStructure = null;
 
+    /// <summary>
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
     public AlgorithmMSG(PNSProblemBase problem, OperatingUnitSet? baseUnitSet = null) : base(problem, baseUnitSet)
     {
     }
 
+    /// <summary>
+    /// Returns the operating units in the maximal structure. Runs the maximal structure generation if it hasn't been run before.
+    /// </summary>
+    /// <returns>Set of operating units in the maximal structure.</returns>
     public OperatingUnitSet GetMaximalStructure()
     {
         if (this._maximalStructure == null)
@@ -78,14 +89,26 @@ public class AlgorithmMSG : AlgorithmBase<PNSProblemBase>
         this._maximalStructure = includedUnits;
     }
 }
+
+/// <summary>
+/// Recursive function-based implementation of Algorithm SSG of the P-graph framework
+/// </summary>
 public class AlgorithmSSGRecursive : AlgorithmBase<PNSProblemBase>
 {
     private List<OperatingUnitSet>? _solutionStructures = null;
 
+    /// <summary>
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
     public AlgorithmSSGRecursive(PNSProblemBase problem, OperatingUnitSet? baseUnitSet = null) : base(problem, baseUnitSet)
     {
     }
 
+    /// <summary>
+    /// Returns the list of solution structures. Runs the solution structure generation if it hasn't been run before.
+    /// </summary>
+    /// <returns>List of solution structures, each represented by a set of operating units.</returns>
     public List<OperatingUnitSet> GetSolutionStructures()
     {
         if (this._solutionStructures == null)
@@ -127,8 +150,8 @@ public class AlgorithmSSGRecursive : AlgorithmBase<PNSProblemBase>
             return;
         }
         IEnumerable<OperatingUnitSet> pwset;
-        if (maxparallel == -1) pwset = PowerSet.GetPowerSet(canProduceSelectedMaterialNew).Select(u => new OperatingUnitSet(u));
-        else pwset = PowerSet.GetPowerSet(canProduceSelectedMaterialNew, maxparallel - alreadyProducingMaterial.Count).Select(u => new OperatingUnitSet(u));
+        if (maxparallel == -1) pwset = NodePowerSet<OperatingUnitNode>.GetPowerSet(canProduceSelectedMaterialNew);
+        else pwset = NodePowerSet<OperatingUnitNode>.GetPowerSet(canProduceSelectedMaterialNew, maxparallel - alreadyProducingMaterial.Count);
         foreach (OperatingUnitSet newUnits in pwset)
         {
             if (newUnits.Count == 0 && ignoreEmptySet) continue;
@@ -150,6 +173,10 @@ public class AlgorithmSSGRecursive : AlgorithmBase<PNSProblemBase>
         }
     }
 }
+
+/// <summary>
+/// Base class for all networks to represent solutions of branch-and-bound algorithms. Contains the set of operating units which define the structure of the solution.
+/// </summary>
 public abstract class NetworkBase
 {
     public OperatingUnitSet? Units { get; } = null;
@@ -161,6 +188,10 @@ public abstract class NetworkBase
         this.Units = units;
     }
 }
+
+/// <summary>
+/// The simplest network to represent solutions of branch-and-bound algorithms. Contains the set of oeprating units and an objective value to be the base of comparision and ordering.
+/// </summary>
 public class SimpleNetwork : NetworkBase, IComparable<SimpleNetwork>
 {
     public double ObjectiveValue { get; }
@@ -177,6 +208,12 @@ public class SimpleNetwork : NetworkBase, IComparable<SimpleNetwork>
     public int CompareTo(SimpleNetwork? other) =>
         other == null ? 1 : this.ObjectiveValue.CompareTo(other.ObjectiveValue);
 }
+
+/// <summary>
+/// Base class for all branch-and-bound algorithms. Defines the basic parameters as well as the collection of ordered n-best solutions. Other than the collection of solutions, all other parameters are only applied if the derived classes support them.
+/// </summary>
+/// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+/// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
 public abstract class BranchAndBoundBase<PNSProblemType, NetworkType> : AlgorithmBase<PNSProblemType>
     where PNSProblemType : PNSProblemBase
     where NetworkType : NetworkBase, IComparable<NetworkType>
@@ -189,6 +226,13 @@ public abstract class BranchAndBoundBase<PNSProblemType, NetworkType> : Algorith
     protected int _threadCount = 1;
     private Lock _solutionUpdateLock = new Lock();
 
+    /// <summary>
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="maxSolutions">Number of n-best solutions to generate. Default value: 1. The value -1 will result in generating all feasible solutions.</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
+    /// <param name="timeLimit">Time limit for generating the solutions</param>
+    /// <param name="threadCount">Number of threads to use while running the algorithm</param>
     public BranchAndBoundBase(PNSProblemType problem, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1) : base(problem, baseUnitSet)
     {
         this._maxSolutions = maxSolutions;
@@ -196,6 +240,10 @@ public abstract class BranchAndBoundBase<PNSProblemType, NetworkType> : Algorith
         this._threadCount = threadCount;
     }
 
+    /// <summary>
+    /// Returns the ordered list of n-best solutions. Runs the branch-and-bound algorithm if it hasn't been run before.
+    /// </summary>
+    /// <returns>Ordered list of n-best solutions, each represented by the given type of network.</returns>
     public List<NetworkType> GetSolutionNetworks()
     {
         if (this._solutionNetworks == null)
@@ -227,6 +275,10 @@ public abstract class BranchAndBoundBase<PNSProblemType, NetworkType> : Algorith
     }
 }
 
+/// <summary>
+/// Basic class for subproblems to use in subproblem-based branch-and-bound algorithms.
+/// </summary>
+/// <typeparam name="PNSProblemType">Type of PNS problem</typeparam>
 public abstract class SubproblemBase<PNSProblemType>
     where PNSProblemType : PNSProblemBase
 {
@@ -261,6 +313,12 @@ public interface ISubpoblemWithIncludedExcludedGetSet : ISubpoblemWithIncludedEx
 {
 }
 
+/// <summary>
+/// Basic class for all subproblem-based branch-and-bound algorithms. Defines the types of the PNS problem, the subproblem representation and the solution network representation. Provides standardized handling of the branching and bounding algorithms, as well as options for extending any branching algorithms with additional logic.
+/// </summary>
+/// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+/// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+/// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
 public abstract class SubproblemBasedBranchAndBoundBase<PNSProblemType, SubproblemType, NetworkType> : BranchAndBoundBase<PNSProblemType, NetworkType>
     where PNSProblemType : PNSProblemBase
     where SubproblemType : SubproblemBase<PNSProblemType>, ISubproblemInitializer<PNSProblemType, SubproblemType>
@@ -271,6 +329,15 @@ public abstract class SubproblemBasedBranchAndBoundBase<PNSProblemType, Subprobl
 
     protected Func<SubproblemType, NetworkType?> _boundingFunction;
 
+    /// <summary>
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="branchingFunction">Branching function defining how the children of a subproblem are generated. The branching function takes a subproblem and return the collection of children subproblems. Can support lazy evaluation.</param>
+    /// <param name="boundingFunction">Bounding function defining how the value and feasibility of a subproblem is evaluated. The bounding function takes a subproblem and returns a network containing the bounding data, of null if the subproblem is infeasible.</param>
+    /// <param name="maxSolutions">Number of n-best solutions to generate. Default value: 1. The value -1 will result in generating all feasible solutions.</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
+    /// <param name="timeLimit">Time limit for generating the solutions</param>
+    /// <param name="threadCount">Number of threads to use while running the algorithm</param>
     public SubproblemBasedBranchAndBoundBase(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
         : base(problem, maxSolutions, baseUnitSet, timeLimit, threadCount)
     {
@@ -297,12 +364,25 @@ public abstract class SubproblemBasedBranchAndBoundBase<PNSProblemType, Subprobl
     }
 }
 
+/// <summary>
+/// Generic recursive implementation of branch-and-bound algorithms. Does not support multi-threaded operation.
+/// </summary>
+/// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+/// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+/// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
 public class RecursiveBranchAndBoundAlgorithm<PNSProblemType, SubproblemType, NetworkType> : SubproblemBasedBranchAndBoundBase<PNSProblemType, SubproblemType, NetworkType>
     where PNSProblemType : PNSProblemBase
     where SubproblemType : SubproblemBase<PNSProblemType>, ISubproblemInitializer<PNSProblemType,SubproblemType>
     where NetworkType : NetworkBase, IComparable<NetworkType>
 {
-
+    /// <summary>
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="branchingFunction">Branching function defining how the children of a subproblem are generated. The branching function takes a subproblem and return the collection of children subproblems. Can support lazy evaluation.</param>
+    /// <param name="boundingFunction">Bounding function defining how the value and feasibility of a subproblem is evaluated. The bounding function takes a subproblem and returns a network containing the bounding data, of null if the subproblem is infeasible.</param>
+    /// <param name="maxSolutions">Number of n-best solutions to generate. Default value: 1. The value -1 will result in generating all feasible solutions.</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
+    /// <param name="timeLimit">Time limit for generating the solutions</param>
     public RecursiveBranchAndBoundAlgorithm(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null)
         : base(problem, branchingFunction, boundingFunction, maxSolutions, baseUnitSet, timeLimit)
     {
@@ -340,6 +420,12 @@ public class RecursiveBranchAndBoundAlgorithm<PNSProblemType, SubproblemType, Ne
     }
 }
 
+/// <summary>
+/// Generic open-list-based implementation of branch-and-bound algorithms. Supports multi-threaded operation. Derived classes need to define how subproblems are inserted and removed from the open list.
+/// </summary>
+/// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+/// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+/// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
 public abstract class OpenListBranchAndBoundBase<PNSProblemType, SubproblemType, NetworkType> : SubproblemBasedBranchAndBoundBase<PNSProblemType, SubproblemType, NetworkType>
     where PNSProblemType : PNSProblemBase
     where SubproblemType : SubproblemBase<PNSProblemType>, ISubproblemInitializer<PNSProblemType, SubproblemType>
@@ -347,6 +433,15 @@ public abstract class OpenListBranchAndBoundBase<PNSProblemType, SubproblemType,
 {
     private Lock _subproblemListLock = new Lock();
 
+    /// <summary>
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="branchingFunction">Branching function defining how the children of a subproblem are generated. The branching function takes a subproblem and return the collection of children subproblems. Can support lazy evaluation.</param>
+    /// <param name="boundingFunction">Bounding function defining how the value and feasibility of a subproblem is evaluated. The bounding function takes a subproblem and returns a network containing the bounding data, of null if the subproblem is infeasible.</param>
+    /// <param name="maxSolutions">Number of n-best solutions to generate. Default value: 1. The value -1 will result in generating all feasible solutions.</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
+    /// <param name="timeLimit">Time limit for generating the solutions</param>
+    /// <param name="threadCount">Number of threads to use while running the algorithm</param>
     public OpenListBranchAndBoundBase(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
         : base(problem, branchingFunction, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
     {
@@ -528,6 +623,13 @@ public static class DefaultMethods
         where T2 : IComparable<T2> =>
         pair1.Item2.CompareTo(pair2.Item2);
 }
+
+/// <summary>
+/// Open-list-based implementation of a branch-and-bound algorithm, where the list is ordered by default or customizable comparator, and the first subproblem in the ordered list is examined next. Supports multi-threaded operation.
+/// </summary>
+/// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+/// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+/// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
 public class OrderedOpenListBranchAndBoundAlgorithm<PNSProblemType, SubproblemType, NetworkType> : OpenListBranchAndBoundBase<PNSProblemType, SubproblemType, NetworkType>
     where PNSProblemType : PNSProblemBase
     where SubproblemType : SubproblemBase<PNSProblemType>, ISubproblemInitializer<PNSProblemType, SubproblemType>
@@ -564,6 +666,13 @@ public class OrderedOpenListBranchAndBoundAlgorithm<PNSProblemType, SubproblemTy
         else { openList.AddBefore(currentNode, node); }
     }
 }
+
+/// <summary>
+/// Open-list-based implementation of a branch-and-bound algorithm, where the open-list operates as a LIFO dataset. Supports multi-threaded operation.
+/// </summary>
+/// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+/// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+/// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
 public class DepthFirstOpenListBranchAndBoundAlgorithm<PNSProblemType, SubproblemType, NetworkType> : OpenListBranchAndBoundBase<PNSProblemType, SubproblemType, NetworkType>
     where PNSProblemType : PNSProblemBase
     where SubproblemType : SubproblemBase<PNSProblemType>, ISubproblemInitializer<PNSProblemType, SubproblemType>
