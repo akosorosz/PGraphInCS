@@ -145,7 +145,7 @@ public static class CommonImplementations
     /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
     /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
     /// <param name="subproblem">Subproblem (is modified by the method)</param>
-    public static void ReducedStructureGenerator<PNSProblemType, SubproblemType>(SubproblemType subproblem)
+    public static bool ReducedStructureGenerator<PNSProblemType, SubproblemType>(SubproblemType subproblem)
         where PNSProblemType : PNSProblemBase
         where SubproblemType : SubproblemBase<PNSProblemType>, ISubpoblemWithIncludedExcludedGetSet
     {
@@ -155,6 +155,7 @@ public static class CommonImplementations
         OperatingUnitSet rsgUnits = msg.GetMaximalStructure();
         excluded.UnionWith(baseSet.Except(rsgUnits));
         subproblem.SetExcludedUnits(excluded);
+        return true;
     }
 
     /// <summary>
@@ -163,7 +164,7 @@ public static class CommonImplementations
     /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
     /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
     /// <param name="subproblem">Subproblem (is modified by the method)</param>
-    public static void NeutralExtension<PNSProblemType, SubproblemType>(SubproblemType subproblem)
+    public static bool NeutralExtension<PNSProblemType, SubproblemType>(SubproblemType subproblem)
         where PNSProblemType : PNSProblemBase
         where SubproblemType : SubproblemBase<PNSProblemType>, ISubpoblemWithIncludedExcludedGetSet
     {
@@ -178,16 +179,26 @@ public static class CommonImplementations
             foreach (MaterialNode material in notProducedMaterials)
             {
                 OperatingUnitSet canProduce = notExcluded.Producing(material);
-                if (canProduce.Count == 1 && !included.Contains(canProduce.First()))
+                OperatingUnitNode newUnit = canProduce.First();
+                if (canProduce.Count == 1 && !included.Contains(newUnit))
                 {
-                    included.Add(canProduce.First());
-                    excluded.UnionWith(subproblem.Problem.MutuallyExclusiveUnits[canProduce.First()]);
-                    change = true;
+                    if (newUnit.Outputs.Intersect(subproblem.Problem.MaterialsWithParallelProductionLimit).Any(m => subproblem.Problem.Producers[m].Intersect(included).Count >= subproblem.Problem.MaxParallelProduction[m]))
+                    {
+                        // This means that the subproblem has no feasbile leaf descendants (this unit must be added, but cannot).
+                        return false;
+                    }
+                    else
+                    {
+                        included.Add(newUnit);
+                        excluded.UnionWith(subproblem.Problem.MutuallyExclusiveUnits[newUnit]);
+                        change = true;
+                    }
                 }
             }
         }
         subproblem.SetIncludedUnits(included);
         subproblem.SetExcludedUnits(excluded);
+        return true;
     }
 
     /// <summary>
@@ -196,7 +207,7 @@ public static class CommonImplementations
     /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
     /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
     /// <returns>List of branching extensions</returns>
-    public static List<Action<SubproblemType>> DefaultBranchingExtensions<PNSProblemType, SubproblemType>()
+    public static List<Func<SubproblemType,bool>> DefaultBranchingExtensions<PNSProblemType, SubproblemType>()
         where PNSProblemType : PNSProblemBase
         where SubproblemType : SubproblemBase<PNSProblemType>, ISubpoblemWithIncludedExcludedGetSet
     {
@@ -212,7 +223,7 @@ public static class CommonImplementations
     /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
     /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
     /// <param name="subproblem">Subproblem (is modified by the method)</param>
-    public static void NeutralExtensionForABB<PNSProblemType, SubproblemType>(SubproblemType subproblem)
+    public static bool NeutralExtensionForABB<PNSProblemType, SubproblemType>(SubproblemType subproblem)
         where PNSProblemType : PNSProblemBase
         where SubproblemType : ABBSubproblem<PNSProblemType>
     {
@@ -226,9 +237,8 @@ public static class CommonImplementations
                 OperatingUnitSet canProduceNew = canProduce.Except(subproblem.Included);
                 if (canProduce.Count == 0)
                 {
-                    return;
-                    // This means that the subproblem has no feasbile leaf descendants (this material must be produced, but no operating units left to do so). The subproblem must remain, but no sense to make further changes, so for now just leave it like this for future branching steps to discover.
-                    // TODO: Maybe find some better solution for this.
+                    // This means that the subproblem has no feasbile leaf descendants (this material must be produced, but no operating units left to do so).
+                    return false;
                 }
                 else if (canProduceNew.Count == 0)
                 {
@@ -239,16 +249,26 @@ public static class CommonImplementations
                 }
                 else if (canProduce.Count == 1 && canProduceNew.Count == 1)
                 {
-                    subproblem.AlreadyProduced.Add(material);
-                    subproblem.ToBeProduced.UnionWith(subproblem.Problem.InputsOf(canProduceNew));
-                    subproblem.ToBeProduced.ExceptWith(subproblem.Problem.RawMaterials.Union(subproblem.AlreadyProduced));
-                    subproblem.Included.UnionWith(canProduceNew);
-                    subproblem.Excluded.UnionWith(subproblem.Problem.MutuallyExclusiveWith(canProduceNew));
-                    change = true;
-                    break;
+                    OperatingUnitNode newUnit = canProduceNew.First();
+                    if (newUnit.Outputs.Intersect(subproblem.Problem.MaterialsWithParallelProductionLimit).Any(m => subproblem.Problem.Producers[m].Intersect(subproblem.Included).Count >= subproblem.Problem.MaxParallelProduction[m]))
+                    {
+                        // This means that the subproblem has no feasbile leaf descendants (this unit must be added, but cannot).
+                        return false;
+                    }
+                    else
+                    {
+                        subproblem.AlreadyProduced.Add(material);
+                        subproblem.ToBeProduced.UnionWith(subproblem.Problem.InputsOf(canProduceNew));
+                        subproblem.ToBeProduced.ExceptWith(subproblem.Problem.RawMaterials.Union(subproblem.AlreadyProduced));
+                        subproblem.Included.UnionWith(canProduceNew);
+                        subproblem.Excluded.UnionWith(subproblem.Problem.MutuallyExclusiveWith(canProduceNew));
+                        change = true;
+                        break;
+                    }
                 }
             }
         }
+        return true;
     }
 
     /// <summary>
@@ -257,7 +277,7 @@ public static class CommonImplementations
     /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
     /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
     /// <returns>List of branching extensions</returns>
-    public static List<Action<SubproblemType>> DefaultBranchingExtensionsForABB<PNSProblemType, SubproblemType>()
+    public static List<Func<SubproblemType,bool>> DefaultBranchingExtensionsForABB<PNSProblemType, SubproblemType>()
         where PNSProblemType : PNSProblemBase
         where SubproblemType : ABBSubproblem<PNSProblemType>
     {

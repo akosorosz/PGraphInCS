@@ -325,7 +325,7 @@ public abstract class SubproblemBasedBranchAndBoundBase<PNSProblemType, Subprobl
     where NetworkType : NetworkBase, IComparable<NetworkType>
 {
     private Func<SubproblemType, IEnumerable<SubproblemType>> _rawBranchingFunction;
-    private List<Action<SubproblemType>> _branchingExtensions = new();
+    private List<Func<SubproblemType,bool>> _branchingExtensions = new();
 
     protected Func<SubproblemType, NetworkType?> _boundingFunction;
 
@@ -345,7 +345,11 @@ public abstract class SubproblemBasedBranchAndBoundBase<PNSProblemType, Subprobl
         this._boundingFunction = boundingFunction;
     }
 
-    public void SetBranchingExtensions(List<Action<SubproblemType>> branchingExtensions)
+    /// <summary>
+    /// Method to set the applied extensions to the subproblem branching. Each provided method gets a subproblem as an argument and modifies it. The return value indicates feasbility: false, if the extension logic found the subproblem infeasible, true, otherwise.
+    /// </summary>
+    /// <param name="branchingExtensions"></param>
+    public void SetBranchingExtensions(List<Func<SubproblemType,bool>> branchingExtensions)
     {
         _branchingExtensions = branchingExtensions;
     }
@@ -354,12 +358,21 @@ public abstract class SubproblemBasedBranchAndBoundBase<PNSProblemType, Subprobl
     {
         foreach (SubproblemType child in _rawBranchingFunction(subproblem))
         {
+            bool isOk = true;
             foreach (var extension in _branchingExtensions)
             {
-                if (child.IsErrorFree == false) break;
-                extension(child);
+                if (child.IsErrorFree == false)
+                {
+                    isOk = false;
+                    break;
+                }
+                if (extension(child) == false)
+                {
+                    isOk = false;
+                    break;
+                }
             }
-            yield return child;
+            if (isOk) yield return child;
         }
     }
 }
