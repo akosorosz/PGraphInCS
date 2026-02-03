@@ -9,8 +9,4 @@ The aim of the library is to provide the code-base for quick and flexible implem
 
 ## Examples and tutorials
 
-The examples folder contains sample projects that serve as tutorials. The samples each discuss certain parts and functionalities of the library.
-
-Current examples:  
-- Example 1 (Basics): This example is the starting point, explaining the basic elements of the library as well as introducing algorithms MSG and SSG.
-- Further examples will arrive soon...
+The Github page of the project (https://github.com/akosorosz/PGraphInCS) contains contains sample projects that serve as tutorials. The samples each discuss certain parts and functionalities of the library.
