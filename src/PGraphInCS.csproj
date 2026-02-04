@@ -17,6 +17,8 @@
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<DebugType>Embedded</DebugType>
+		<EmbedAllSources>True</EmbedAllSources>
 	</PropertyGroup>
 
 	<ItemGroup>
