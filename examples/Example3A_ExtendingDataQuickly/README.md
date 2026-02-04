@@ -45,6 +45,19 @@ And now find all solutions:
         Console.WriteLine($"Units: {solution.Units}, total cost: {solution.ObjectiveValue}");
     }
 
+It is possible to make generic bounding methods which can be used by any branching methods what satisfy certain requirements (defined by interfaces)
+
+    SimpleNetwork fixCostBounding(ISubpoblemWithIncludedExcludedGet subproblem)
+    {
+        return new SimpleNetwork(subproblem.GetIncludedUnits(), subproblem.GetIncludedUnits().Sum(unit => (int)unit.AdditionalParameters["cost"]));
+    }
+
+It is then can be used with any appropriate algorithms
+
+    var abb = new CommonImplementations.AlgorithmABBOrderedOpenList<SimplePNSProblem, SimpleNetwork>(problem, fixCostBounding, maxSolutions: -1);
+
+    var binary = new DepthFirstOpenListBranchAndBoundAlgorithm<SimplePNSProblem, CommonImplementations.BinaryDecisionSubproblem<SimplePNSProblem>, SimpleNetwork>(problem, CommonImplementations.BinaryDecisionBranching, fixCostBounding, maxSolutions: -1);
+
 Naturally, the AdditionalParameters can be filled with any values.
 
 For example, if we want an investment cost and a yearly cost, they can be two different entries:
