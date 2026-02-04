@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Google.OrTools.ConstraintSolver;
 
 namespace PGraphInCS;
 
@@ -13,6 +14,7 @@ public static class CommonImplementations
 {
     /// <summary>
     /// Subproblem specifically designed for Algorithm ABB of the P-graph framework (choose a material, decide which units to include to produce it)
+    /// This class does not check for structural feasibility (P-graph axioms), only for the inconsistency of decisions.
     /// </summary>
     /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
     public class ABBSubproblem<PNSProblemType> : SubproblemBase<PNSProblemType>, ISubpoblemWithIncludedExcludedGetSet, ISubproblemInitializer<PNSProblemType, ABBSubproblem<PNSProblemType>>
@@ -89,6 +91,7 @@ public static class CommonImplementations
 
     /// <summary>
     /// Subproblem specifically designed for branching base on binary decisions (choose an operating unit, either include it or exclude it)
+    /// This class checks for the inconsistency of decisions, as well as for the structural feasibility (P-graph axioms) in case of leaf subproblems.
     /// </summary>
     /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
     public class BinaryDecisionSubproblem<PNSProblemType> : SubproblemBase<PNSProblemType>, ISubpoblemWithIncludedExcludedGetSet, ISubproblemInitializer<PNSProblemType, BinaryDecisionSubproblem<PNSProblemType>>
@@ -97,14 +100,16 @@ public static class CommonImplementations
         public OperatingUnitSet Included { get; set; }
         public OperatingUnitSet Excluded { get; set; }
         public OperatingUnitSet Undecided { get; set; }
+        private bool _isErrorFree = true;
         public BinaryDecisionSubproblem(PNSProblemType problem, OperatingUnitSet? baseUnitSet, OperatingUnitSet included, OperatingUnitSet excluded) : base(problem, baseUnitSet)
         {
             Included = included.Clone();
             Excluded = excluded.Clone();
             Undecided = problem.OperatingUnits.Except(included.Union(excluded));
+            CheckForErrors();
         }
         public override bool IsLeaf => Undecided.Count == 0;
-        public override bool IsErrorFree => Included.Intersect(Excluded).Any() == false && Problem.MaterialsWithParallelProductionLimit.All(m => Problem.Producers[m].Intersect(Included).Count <= Problem.MaxParallelProduction[m]);
+        public override bool IsErrorFree => _isErrorFree;
         public static BinaryDecisionSubproblem<PNSProblemType> InitializeRoot(PNSProblemType problem, OperatingUnitSet? baseUnitSet)
         {
             OperatingUnitSet unitToConsider = baseUnitSet != null ? baseUnitSet : problem.OperatingUnits;
@@ -117,11 +122,26 @@ public static class CommonImplementations
         {
             Included = units.Clone();
             Undecided = Problem.OperatingUnits.Except(Included.Union(Excluded));
+            CheckForErrors();
         }
         public void SetExcludedUnits(OperatingUnitSet units)
         {
             Excluded = units.Clone();
             Undecided = Problem.OperatingUnits.Except(Included.Union(Excluded));
+            CheckForErrors();
+        }
+        private void CheckForErrors()
+        {
+            _isErrorFree = Included.Intersect(Excluded).Any() == false && Problem.MaterialsWithParallelProductionLimit.All(m => Problem.Producers[m].Intersect(Included).Count <= Problem.MaxParallelProduction[m]);
+            if (_isErrorFree && Undecided.Count == 0)
+            {
+                AlgorithmMSG msg = new(Problem, Included);
+                var msgUnits = msg.GetMaximalStructure();
+                if (msgUnits.Count < Included.Count || Problem.Products.Except(msgUnits.Outputs()).Count > 0)
+                {
+                    _isErrorFree = false;
+                }
+            }
         }
     }
 
@@ -141,6 +161,8 @@ public static class CommonImplementations
 
     /// <summary>
     /// Reduced Structure Generator (RSG) algorithm to reduce the free part during branching. Can be employed on any subproblem which keeps track of the included and the excluded operating units.
+    /// Only excludes additional operating units if they cannot be part of any structurally feasible network given the previous decisions.
+    /// Never marks the subproblem infeasible.
     /// </summary>
     /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
     /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
@@ -160,6 +182,8 @@ public static class CommonImplementations
 
     /// <summary>
     /// Neutral extension algorithm to reduce the free part during branching. Can be employed on any subproblem which keeps track of the included and the excluded operating units.
+    /// Only includes new operating units if they must be part of any structurally feasible network given the previous decisions.
+    /// May mark subproblems infeasible if the must be added units cannot be added due to other limitations.
     /// </summary>
     /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
     /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
@@ -219,6 +243,8 @@ public static class CommonImplementations
 
     /// <summary>
     /// Neutral extension algorithm specifically for Algorithm ABB.
+    /// Only includes new operating units if they must be part of any structurally feasible network given the previous decisions.
+    /// May mark subproblems infeasible if the must be added units cannot be added due to other limitations.
     /// </summary>
     /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
     /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>

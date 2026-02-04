@@ -44,6 +44,8 @@ public class AlgorithmMSG : AlgorithmBase<PNSProblemBase>
     /// </summary>
     public void Run()
     {
+        this._maximalStructure = new OperatingUnitSet();
+
         // Reduction phase initialization
         OperatingUnitSet unitsToBeRemoved = _problem.ProducersOf(_problem.RawMaterials);
         OperatingUnitSet units;
@@ -355,7 +357,9 @@ public abstract class SubproblemBasedBranchAndBoundBase<PNSProblemType, Subprobl
     }
 
     /// <summary>
-    /// Method to set the applied extensions to the subproblem branching. Each provided method gets a subproblem as an argument and modifies it. The return value indicates feasbility: false, if the extension logic found the subproblem infeasible, true, otherwise.
+    /// Method to set the applied extensions to the subproblem branching.
+    /// Each provided method gets a subproblem as an argument and modifies it. The return value indicates feasbility: false, if the extension logic found the subproblem infeasible, true, otherwise.
+    /// It is important to guarantee that the applied branching extensions do not break any assumptions of the raw branching method.
     /// </summary>
     /// <param name="branchingExtensions"></param>
     public void SetBranchingExtensions(List<Func<SubproblemType,bool>> branchingExtensions)
