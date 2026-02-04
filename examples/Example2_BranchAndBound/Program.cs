@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using PGraphInCS;
+﻿using PGraphInCS;
 
 /*
  * This sample code explains how to configure and execute branch-and-bound algorithms to perform optimization.
@@ -21,7 +20,7 @@ SimplePNSProblem problem = getSampleProblem();
  */
 
 /*
- * The library contains 2 main overall algorithms:
+ * The library contains 3 main overall algorithms in 2 groups:
  *   Recursive method call-based operation, which generates child subproblems and recursively calls the main logic on each of them. This is inherently a depth-first search, and does not support multi-threaded operation. The current version of the library implements this via the class:
  *      RecursiveBranchAndBoundAlgorithm
  *   Open subproblem list-based operation, where generated child subproblems are added to a subproblem list and when a new subproblem is examined, it is taken from this list. The logic of the list can be configured, and supports multi-threaded operation. The current version of the library has two implementations:
