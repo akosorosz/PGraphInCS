@@ -1,11 +1,12 @@
-﻿using PGraphInCS;
-
-/*
+﻿/*
  * The library starts from the very basics of P-graphs: materials and operating units. 
  * Materials only store their name and an automatically generated Id.
  * Operating units stote their name, an automatically generated Id, and the their inputs and outputs (materials).
  * The basic model does not include any data related to feasibility models, as those can change depending on the actual problem to be solved.
  */
+
+// Don't forget to use the namespace
+using PGraphInCS;
 
 // To start, first create the PNS problem, the materials, and the operating units.
 SimplePNSProblem problem = new();
