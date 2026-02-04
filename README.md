@@ -15,4 +15,5 @@ The library does not explain the P-graph framework, nor its main algorithms. It 
 
 Current examples:  
 - Example 1 (Basics): This example is the starting point, explaining the basic elements of the library as well as introducing algorithms MSG and SSG.
+- Example 2 (Branch and Bound): Explains the library's branch-and-bound capabilities and options. Contains lots of text and explanation, but important to understand the basic operation of the library.
 - Further examples will arrive soon...

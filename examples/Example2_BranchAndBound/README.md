@@ -1,3 +1,5 @@
+# Example 2: the branch-and-bound system
+
 This sample code explains how to configure and execute branch-and-bound algorithms to perform optimization.
 
 Branch-and-bound algorithms in the library follow a class hierarchy which defines the essential logic of the algorithm.
