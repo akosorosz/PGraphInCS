@@ -39,7 +39,10 @@ public class AlgorithmMSG : AlgorithmBase<PNSProblemBase>
         return this._maximalStructure!;
     }
 
-    private void Run()
+    /// <summary>
+    /// Runs the algorithm. Not necessary to call directly, as GetMaximalStructure() calls it if it was not called directly.
+    /// </summary>
+    public void Run()
     {
         // Reduction phase initialization
         OperatingUnitSet unitsToBeRemoved = _problem.ProducersOf(_problem.RawMaterials);
@@ -116,7 +119,10 @@ public class AlgorithmSSGRecursive : AlgorithmBase<PNSProblemBase>
         return this._solutionStructures!;
     }
 
-    private void Run()
+    /// <summary>
+    /// Runs the algorithm. Not necessary to call directly, as GetSolutionStructures() calls it if it was not called directly.
+    /// </summary>
+    public void Run()
     {
         this._solutionStructures = new List<OperatingUnitSet>();
         AlgorithmMSG msg = new AlgorithmMSG(_problem,_baseUnitSet);
@@ -253,6 +259,9 @@ public abstract class BranchAndBoundBase<PNSProblemType, NetworkType> : Algorith
         return this._solutionNetworks!;
     }
 
+    /// <summary>
+    /// Runs the algorithm. Not necessary to call directly, as GetSolutionNetworks() calls it if it was not called directly.
+    /// </summary>
     public void Solve()
     {
         this._solutionNetworks = new List<NetworkType>();
