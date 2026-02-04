@@ -313,23 +313,23 @@ public abstract class PNSProblemBase
 /// </summary>
 /// <typeparam name="MaterialNodeType"></typeparam>
 /// <typeparam name="OperatingUnitNodeType"></typeparam>
-public abstract class PNSProblem<MaterialNodeType, OperatingUnitNodeType> : PNSProblemBase
+public class PNSProblem<MaterialNodeType, OperatingUnitNodeType> : PNSProblemBase
     where MaterialNodeType : MaterialNode
     where OperatingUnitNodeType : OperatingUnitNode
 {
-    public void AddMaterial(MaterialNodeType node)
+    public virtual void AddMaterial(MaterialNodeType node)
     {
         base.AddMaterialBase(node);
     }
-    public void AddOperatingUnit(OperatingUnitNodeType node)
+    public virtual void AddOperatingUnit(OperatingUnitNodeType node)
     {
         base.AddOperatingUnitBase(node);
     }
-    public void RemoveMaterial(MaterialNodeType node)
+    public virtual void RemoveMaterial(MaterialNodeType node)
     {
         base.RemoveMaterial(node);
     }
-    public void RemoveOperatingUnit(OperatingUnitNodeType node)
+    public virtual void RemoveOperatingUnit(OperatingUnitNodeType node)
     {
         base.RemoveOperatingUnit(node);
     }
