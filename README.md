@@ -11,6 +11,8 @@ The aim of the library is to provide the code-base for quick and flexible implem
 
 The examples folder contains sample projects that serve as tutorials. The samples each discuss certain parts and functionalities of the library.
 
+The library does not explain the P-graph framework, nor its main algorithms. It is reasonable to expect that anyone interested in this library is already adequately familiar with the P-graph framework.
+
 Current examples:  
 - Example 1 (Basics): This example is the starting point, explaining the basic elements of the library as well as introducing algorithms MSG and SSG.
 - Further examples will arrive soon...

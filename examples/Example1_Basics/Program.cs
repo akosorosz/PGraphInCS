@@ -98,6 +98,11 @@ Console.WriteLine();
 // It is possible to mark sets of operating units as mutually exclusive, meaning that only one of them can exists any solution. Any number of mutually exclusive set can be defined.
 problem.AddMutuallyExclusiveSet(new OperatingUnitSet { O6, O7 });
 
+// MaterialSet and OperatingUnitSet also provide functionality to find certain items by name or by id.
+// FindByName and FindById return null if the item is not found, while the indexers throw an exception.
+//problem.AddMutuallyExclusiveSet(new OperatingUnitSet { problem.OperatingUnits["O6"], problem.OperatingUnits.FindByName("O7")! });
+//problem.AddMutuallyExclusiveSet(new OperatingUnitSet { problem.OperatingUnits[17], problem.OperatingUnits.FindById(18)! });
+
 // Parallel production limit (i.e., at most how many operating units can produce a material in any solution) can be set by giving the material node variable, or just the material name.
 problem.SetMaxParallelProduction(mC, 2); // This does not limit anything in the current case, since there are only two operating units producing material C anyway.
 problem.SetMaxParallelProduction("A", 1); // A parallel production limit of 1 has the same effect as a mutual exclusion, but defined with a different meaning, and handled differently in code.
