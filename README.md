@@ -1,7 +1,7 @@
 # PGraphInCS
 A flexible implementation of P-Graph algorithms in C#.
 
-Current release version: 1.0.0
+Current release version: 1.0.0 (Also available in NuGet under the same name: PGraphInCS)
 
 ## Description
 
