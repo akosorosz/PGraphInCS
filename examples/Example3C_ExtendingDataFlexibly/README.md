@@ -1,4 +1,4 @@
-# Example 3b: Extending data the flexible way
+# Example 3C: Extending data the flexible way
 
 In most applications, the basic data for materials and operating units, what was introduced so far, is not enough. One of the important use-cases of this library builds on extending the data of the PNS problem and its components.
 
