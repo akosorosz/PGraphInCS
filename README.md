@@ -20,4 +20,7 @@ Current examples:
   - Example 3A (The quick way): Explains the quickest way to extend the data, in case there are only some small things to add. Suggested for smaller changes.
   - Example 3B (The efficient way): Explains the efficient way to extend the data, prioritizing type safety, code readibility, and computational efficiency. Suggested for larger changes.
   - Example 3C (The flexible way): Explains the flexible way to extend the data, focusing on reusability of components for multiple problems. Suggested if you expect to solve multiple problems of the same materials and operating units while varying the new data.
+- The library provides compatibility with the main model of P-Graph Studio for convenience. It is available in both efficient-style and flexible-style implementation:
+  - Example 4A (Linear PNS the efficient way): Showcases how to use the efficient implementation of the linear model.
+  - Example 4B (Linear PNS the flexible way): Showcases how to use the flexible implementation of the linear model.
 - Further examples will arrive soon...

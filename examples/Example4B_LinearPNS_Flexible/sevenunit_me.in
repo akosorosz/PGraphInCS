@@ -1,0 +1,53 @@
+file_type=PNS_problem_v1
+file_name=Graph_1767123711
+
+measurement_units:
+mass_unit=t
+time_unit=m
+money_unit=EUR
+
+defaults:
+material_type=intermediate
+material_flow_rate_lower_bound=0
+material_flow_rate_upper_bound=10000000
+material_price=0
+operating_unit_capacity_lower_bound=0
+operating_unit_capacity_upper_bound=10000000
+operating_unit_fix_cost=0
+operating_unit_proportional_cost=0
+
+materials:
+A: product, flow_rate_lower_bound=425
+B: intermediate
+C: intermediate
+D: intermediate
+E: raw_material, price=1.2
+F: intermediate
+G: raw_material, price=3.3
+H: intermediate
+J: raw_material, price=1.5
+K: raw_material, price=2.1
+L: raw_material, price=1.2
+
+operating_units:
+O1: capacity_upper_bound=250, fix_cost=50, proportional_cost=0.25
+O2: capacity_upper_bound=190, fix_cost=30, proportional_cost=0.34
+O3: capacity_upper_bound=360, fix_cost=100, proportional_cost=0.16
+O4: capacity_upper_bound=510, fix_cost=80, proportional_cost=0.42
+O5: capacity_upper_bound=430, fix_cost=90, proportional_cost=0.13
+O6: capacity_upper_bound=290, fix_cost=20, proportional_cost=0.28
+O7: capacity_upper_bound=340, fix_cost=40, proportional_cost=0.27
+
+material_to_operating_unit_flow_rates:
+O1: 2 C => 1.5 A + 0.5 F
+O2: 2 D => B + A
+O3: F + E => 2 C
+O4: G + F => D + C
+O5: G + H => 2 D
+O6: J => F
+O7: K + L => 2 H
+
+mutually_exlcusive_sets_of_operating_units:
+O6O7_1767123700: O6, O7
+O5O6O7_1767123700: O5, O6, O7
+
