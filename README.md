@@ -23,4 +23,5 @@ Current examples:
 - The library provides compatibility with the main model of P-Graph Studio for convenience. It is available in both efficient-style and flexible-style implementation:
   - Example 4A (Linear PNS the efficient way): Showcases how to use the efficient implementation of the linear model.
   - Example 4B (Linear PNS the flexible way): Showcases how to use the flexible implementation of the linear model.
+- Example 5 (Custom bounding): Explains the role of the bounding methods in more detail
 - Further examples will arrive soon...
