@@ -57,9 +57,23 @@ public class LinearPNSProblem : SimplePNSProblem
             {
                 InputRatios.Add(unit, new Dictionary<MaterialNode, double>());
             }
+            foreach (MaterialNode material in unit.Inputs)
+            {
+                if (!InputRatios[unit].ContainsKey(material))
+                {
+                    InputRatios[unit].Add(material, 1);
+                }
+            }
             if (!OutputRatios.ContainsKey(unit))
             {
                 OutputRatios.Add(unit, new Dictionary<MaterialNode, double>());
+            }
+            foreach (MaterialNode material in unit.Outputs)
+            {
+                if (!OutputRatios[unit].ContainsKey(material))
+                {
+                    OutputRatios[unit].Add(material, 1);
+                }
             }
         }
     }
