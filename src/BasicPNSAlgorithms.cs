@@ -293,8 +293,8 @@ public abstract class BranchAndBoundBase<PNSProblemType, NetworkType> : Algorith
 public abstract class SubproblemBase<PNSProblemType>
     where PNSProblemType : PNSProblemBase
 {
-    public PNSProblemType Problem;
-    public OperatingUnitSet? BaseUnitSet;
+    public PNSProblemType Problem { get; set; }
+    public OperatingUnitSet? BaseUnitSet { get; set; }
 
     protected SubproblemBase(PNSProblemType problem, OperatingUnitSet? baseUnitSet)
     {
