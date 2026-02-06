@@ -16,4 +16,8 @@ The library does not explain the P-graph framework, nor its main algorithms. It 
 Current examples:  
 - Example 1 (Basics): This example is the starting point, explaining the basic elements of the library as well as introducing algorithms MSG and SSG.
 - Example 2 (Branch and Bound): Explains the library's branch-and-bound capabilities and options. Contains lots of text and explanation, but important to understand the basic operation of the library.
+- Three examples showcase the three supported ways to add additional data the the PNS problem. Choose one or combine more the extend your data:
+  - Example 3A (The quick way): Explains the quickest way to extend the data, in case there are only some small things to add. Suggested for smaller changes.
+  - Example 3B (The efficient way): Explains the efficient way to extend the data, prioritizing type safety, code readibility, and computational efficiency. Suggested for larger changes.
+  - Example 3C (The flexible way): Explains the flexible way to extend the data, focusing on reusability of components for multiple problems. Suggested if you expect to solve multiple problems of the same materials and operating units while varying the new data.
 - Further examples will arrive soon...
