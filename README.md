@@ -24,4 +24,7 @@ Current examples:
   - Example 4A (Linear PNS the efficient way): Showcases how to use the efficient implementation of the linear model.
   - Example 4B (Linear PNS the flexible way): Showcases how to use the flexible implementation of the linear model.
 - Example 5 (Custom bounding): Explains the role of the bounding methods in more detail
+- More examples are given to show the bounding methods in more levels:
+  - Example 6A (Modified bounding result): A linear PNS problem is extended with CO2 production, which is calculated for each solution network. To do this, the bounding method wraps the standard bounding and reinterprets the results.
+  - Example 6B (New LP model): Also extends the linear PNS problem with CO2 production, however, now the CO2 production is the objective function, while there is an upper bound for cost. This requires a modified LP model, network representation, and bounding method, resulting in a complex example.
 - Further examples will arrive soon...
