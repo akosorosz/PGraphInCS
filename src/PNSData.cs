@@ -154,6 +154,8 @@ public abstract class PNSProblemBase
     public Dictionary<OperatingUnitNode, OperatingUnitSet> MutuallyExclusiveUnits { get; } = new Dictionary<OperatingUnitNode, OperatingUnitSet>(); // only for optimization purposes
     public MaterialSet MaterialsWithParallelProductionLimit { get; } = new MaterialSet();
 
+    public Dictionary<string, object> AdditionalParameters { get; } = new Dictionary<string, object>();
+
     protected void AddMaterialBase(MaterialNode node)
     {
         Materials.Add(node);
