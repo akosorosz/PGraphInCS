@@ -323,7 +323,7 @@ public static class CommonImplementations
         where SubproblemType : SubproblemBase<LinearPNS.Efficient.LinearPNSProblem>, ISubpoblemWithIncludedExcludedGet
     {
         OperatingUnitSet unitsToUseInLp = subproblem.IsLeaf ? subproblem.GetIncludedUnits() : subproblem.Problem.OperatingUnits.Except(subproblem.GetExcludedUnits());
-        LinearPNS.Efficient.SimpleLinearPNSLPModel lpmodel = new LinearPNS.Efficient.SimpleLinearPNSLPModel(subproblem.Problem, unitsToUseInLp);
+        LinearPNS.Efficient.SimpleLinearPNSLPModel lpmodel = new LinearPNS.Efficient.SimpleLinearPNSLPModel(subproblem.Problem, unitsToUseInLp, subproblem.GetIncludedUnits());
         if (!lpmodel.Solve())
         {
             return null;
@@ -348,7 +348,7 @@ public static class CommonImplementations
         where SubproblemType : SubproblemBase<LinearPNS.Flexible.LinearPNSProblem>, ISubpoblemWithIncludedExcludedGet
     {
         OperatingUnitSet unitsToUseInLp = subproblem.IsLeaf ? subproblem.GetIncludedUnits() : subproblem.Problem.OperatingUnits.Except(subproblem.GetExcludedUnits());
-        LinearPNS.Flexible.SimpleLinearPNSLPModel lpmodel = new LinearPNS.Flexible.SimpleLinearPNSLPModel(subproblem.Problem, unitsToUseInLp);
+        LinearPNS.Flexible.SimpleLinearPNSLPModel lpmodel = new LinearPNS.Flexible.SimpleLinearPNSLPModel(subproblem.Problem, unitsToUseInLp, subproblem.GetIncludedUnits());
         if (!lpmodel.Solve())
         {
             return null;
