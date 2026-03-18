@@ -1165,7 +1165,7 @@ public class SimpleLinearPNSLPModel
 
     public SimpleLinearPNSLPModel(LinearPNSProblem problem, OperatingUnitSet? baseUnitSet = null)
     {
-        _modelSolver = Solver.CreateSolver("SCIP");
+        _modelSolver = Solver.CreateSolver("GLOP");
         OperatingUnitSet unitsToWorkWith = new OperatingUnitSet(problem.OperatingUnits);
         if (baseUnitSet != null)
         {

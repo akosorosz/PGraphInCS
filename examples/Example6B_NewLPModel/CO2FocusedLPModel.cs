@@ -16,7 +16,7 @@ public class CO2FocusedLPModel
 
     public CO2FocusedLPModel(LinearPNSProblem problem, OperatingUnitSet unitsToWorkWith, OperatingUnitSet unitsAlreadyIncluded)
     {
-        _modelSolver = Solver.CreateSolver("SCIP");
+        _modelSolver = Solver.CreateSolver("GLOP");
         MaterialSet materialsToWorkWith = unitsToWorkWith.Inputs().Union(unitsToWorkWith.Outputs());
 
         // Get the sum of the already included fix costs, as we can use that for sharper cost limit

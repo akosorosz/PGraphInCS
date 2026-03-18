@@ -83,7 +83,7 @@ There is no built-in codebase to make this simple, but we can copy the built-in 
 
 Building the model takes several steps. First, there are the initializations. Here we also get the sum of the already included fix costs, as we can use that for sharper cost limit
 
-    _modelSolver = Solver.CreateSolver("SCIP");
+    _modelSolver = Solver.CreateSolver("GLOP");
     MaterialSet materialsToWorkWith = unitsToWorkWith.Inputs().Union(unitsToWorkWith.Outputs());
     
     _includedFixCosts = unitsAlreadyIncluded.Cast<LinearOperatingUnitNode>().Sum(u => u.FixOperatingCost + u.FixInvestmentCost / u.PayoutPeriod);
