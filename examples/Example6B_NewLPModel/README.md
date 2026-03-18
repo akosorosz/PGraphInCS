@@ -103,10 +103,7 @@ Building the model takes several steps. First, there are the initializations. He
 We have a constraint for each material which need the proper lower and upper bounds. There are no variables for the materials in this model.
     
     MaterialSet materialsWithBounds = problem.Intermediates.Clone();
-    if (alreadyIncluded != null)
-    {
-        materialsWithBounds.IntersectWith(alreadyIncluded.Inputs().Union(alreadyIncluded.Outputs()));
-    }
+    materialsWithBounds.IntersectWith(unitsAlreadyIncluded.Inputs().Union(unitsAlreadyIncluded.Outputs()));
     materialsWithBounds.UnionWith(problem.RawMaterials);
     materialsWithBounds.UnionWith(problem.Products);
 
@@ -131,7 +128,7 @@ Let's make a proper calculation of CO2 production here: consumed raw materials a
     _unitSizeVars = new();
     foreach (var unit in unitsToWorkWith.Cast<LinearOperatingUnitNode>())
     {
-        double lb = (alreadyIncluded?.Contains(unit) ?? false) ? unit.CapacityLowerBound : 0.0;
+        double lb = unitsAlreadyIncluded.Contains(unit) ? unit.CapacityLowerBound : 0.0;
         var unitVar = _modelSolver.MakeNumVar(lb, unit.CapacityUpperBound, "x_" + unit.Name);
         _unitSizeVars.Add(unit, unitVar);
         double realUnitCost = unit.ProportionalOperatingCost + unit.ProportionalInvestmentCost / unit.PayoutPeriod;
