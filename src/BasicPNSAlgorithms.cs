@@ -232,7 +232,7 @@ public abstract class BranchAndBoundBase<PNSProblemType, NetworkType> : Algorith
     protected DateTime _startTime = DateTime.MinValue;
 
     protected int _threadCount = 1;
-    private Lock _solutionUpdateLock = new Lock();
+    private Lock _solutionListLock = new Lock();
 
     /// <summary>
     /// </summary>
@@ -275,13 +275,24 @@ public abstract class BranchAndBoundBase<PNSProblemType, NetworkType> : Algorith
     protected void SaveSolutionAndUpdate(NetworkType network)
     {
         int insertindex = 0;
-        lock (_solutionUpdateLock)
+        lock (_solutionListLock)
         {
             while (insertindex < _solutionNetworks!.Count && _solutionNetworks![insertindex].CompareTo(network) <= 0)
                 insertindex++;
             _solutionNetworks.Insert(insertindex, network);
             if (_maxSolutions != -1 && _solutionNetworks.Count > _maxSolutions) // for now, we do not keep same value solutions as extra
                 _solutionNetworks.RemoveAt(_solutionNetworks.Count - 1);
+        }
+    }
+    protected bool ShouldFathomNetworkDueToBound(NetworkType network)
+    {
+        lock (_solutionListLock)
+        {
+            if (_maxSolutions != -1 && _solutionNetworks!.Count >= _maxSolutions && network.CompareTo(_solutionNetworks.Last()) >= 0)
+            {
+                return true;
+            }
+            return false;
         }
     }
 }
@@ -435,7 +446,7 @@ public class RecursiveBranchAndBoundAlgorithm<PNSProblemType, SubproblemType, Ne
             SaveSolutionAndUpdate(boundNetwork);
             return;
         }
-        if (_maxSolutions != -1 && _solutionNetworks!.Count >= _maxSolutions && boundNetwork.CompareTo(_solutionNetworks.Last()) >= 0)
+        if (ShouldFathomNetworkDueToBound(boundNetwork))
         {
             return;
         }
@@ -511,7 +522,7 @@ public abstract class OpenListBranchAndBoundBase<PNSProblemType, SubproblemType,
                     SaveSolutionAndUpdate(boundNetwork);
                     continue;
                 }
-                if (_maxSolutions != -1 && _solutionNetworks!.Count >= _maxSolutions && boundNetwork.CompareTo(_solutionNetworks.Last()) >= 0)
+                if (ShouldFathomNetworkDueToBound(boundNetwork))
                 {
                     continue;
                 }
@@ -582,7 +593,7 @@ public abstract class OpenListBranchAndBoundBase<PNSProblemType, SubproblemType,
                             SaveSolutionAndUpdate(boundNetwork);
                             continue;
                         }
-                        if (_maxSolutions != -1 && _solutionNetworks!.Count >= _maxSolutions && boundNetwork.CompareTo(_solutionNetworks.Last()) >= 0)
+                        if (ShouldFathomNetworkDueToBound(boundNetwork))
                         {
                             continue;
                         }
