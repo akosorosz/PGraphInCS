@@ -154,6 +154,7 @@ public abstract class PNSProblemBase
     public Dictionary<OperatingUnitNode, OperatingUnitSet> MutuallyExclusiveUnits { get; } = new Dictionary<OperatingUnitNode, OperatingUnitSet>(); // only for optimization purposes
     public MaterialSet MaterialsWithParallelProductionLimit { get; } = new MaterialSet();
 
+
     public Dictionary<string, object> AdditionalParameters { get; } = new Dictionary<string, object>();
 
     protected void AddMaterialBase(MaterialNode node)
@@ -307,6 +308,16 @@ public abstract class PNSProblemBase
         var material = Materials.FindByName(materialName);
         if (material != null)
             MaxParallelProduction[material] = maxParallelProd;
+    }
+
+    public bool IsAnyMaxParallelProductionViolatedByUnits(OperatingUnitSet units)
+    {
+        return MaterialsWithParallelProductionLimit.Any(m => Producers[m].Intersect(units).Count > MaxParallelProduction[m]);
+    }
+
+    public bool IsMaxParallelProductionOfMaterialViolatedByUnits(MaterialNode material, OperatingUnitSet units)
+    {
+        return MaterialsWithParallelProductionLimit.Contains(material) && Producers[material].Intersect(units).Count > MaxParallelProduction[material];
     }
 }
 
