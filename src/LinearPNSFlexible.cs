@@ -410,7 +410,7 @@ public class LinearPNSProblem : SimplePNSProblem
 
                     double minCap = double.Parse(getValueOrDefault(unitProperties, "capacity_lower_bound", "operating_unit_capacity_lower_bound"));
                     double maxCap = double.Parse(getValueOrDefault(unitProperties, "capacity_upper_bound", "operating_unit_capacity_upper_bound"));
-                    double fixCost = double.Parse(getValueOrDefault(unitProperties, "fix_cost", "proportional_cost"));
+                    double fixCost = double.Parse(getValueOrDefault(unitProperties, "fix_cost", "operating_unit_fix_cost"));
                     double propCost = double.Parse(getValueOrDefault(unitProperties, "proportional_cost", "operating_unit_proportional_cost"));
 
                     OperatingUnitNode unit = new(unitName);
