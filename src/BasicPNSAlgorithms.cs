@@ -458,17 +458,22 @@ public class RecursiveBranchAndBoundAlgorithm<PNSProblemType, SubproblemType, Ne
 }
 
 /// <summary>
-/// Generic open-list-based implementation of branch-and-bound algorithms. Supports multi-threaded operation. Derived classes need to define how subproblems are inserted and removed from the open list.
+/// Generic open-subproblem-based implementation of branch-and-bound algorithms. Supports multi-threaded operation. Derived classes need to define the type of the subproblem storaage how subproblems are inserted and removed from the open storage. Storage needs to store subproblems and networks.
 /// </summary>
 /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
 /// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
 /// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
-public abstract class OpenListBranchAndBoundBase<PNSProblemType, SubproblemType, NetworkType> : SubproblemBasedBranchAndBoundBase<PNSProblemType, SubproblemType, NetworkType>
+/// <typeparam name="SubproblemStorageType">Type of the storage to store the open subproblems</typeparam>
+public abstract class OpenSubproblemBranchAndBoundBase<PNSProblemType, SubproblemType, NetworkType, SubproblemStorageType> : SubproblemBasedBranchAndBoundBase<PNSProblemType, SubproblemType, NetworkType>
     where PNSProblemType : PNSProblemBase
     where SubproblemType : SubproblemBase<PNSProblemType>, ISubproblemInitializer<PNSProblemType, SubproblemType>
     where NetworkType : NetworkBase, IComparable<NetworkType>
+    where SubproblemStorageType : class, new()
 {
-    private Lock _subproblemListLock = new Lock();
+    /// <summary>
+    /// Lock object providing thread safety when accessing subproblem storage.
+    /// </summary>
+    protected Lock _subproblemStorageLock = new Lock();
 
     /// <summary>
     /// </summary>
@@ -479,36 +484,62 @@ public abstract class OpenListBranchAndBoundBase<PNSProblemType, SubproblemType,
     /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
     /// <param name="timeLimit">Time limit for generating the solutions</param>
     /// <param name="threadCount">Number of threads to use while running the algorithm</param>
-    public OpenListBranchAndBoundBase(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+    public OpenSubproblemBranchAndBoundBase(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
         : base(problem, branchingFunction, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
     {
     }
-    protected abstract (SubproblemType, NetworkType) PopNextOpenSubproblemNode(LinkedList<(SubproblemType, NetworkType)> openList);
-    protected abstract void AddNodeToOpenList(LinkedList<(SubproblemType, NetworkType)> openList, (SubproblemType, NetworkType) node);
+    /// <summary>
+    /// Pops the next subproblem to be examined. No need to provide thread safety in the implementation.
+    /// </summary>
+    /// <param name="openSubproblems"></param>
+    /// <returns></returns>
+    protected abstract (SubproblemType, NetworkType) PopNextOpenSubproblemNode(SubproblemStorageType openSubproblems);
+    /// <summary>
+    /// Adds the new subproblem to the subproblem storage. No need to provide thread safety in the implementation.
+    /// </summary>
+    /// <param name="openSubproblems"></param>
+    /// <param name="node"></param>
+    protected abstract void AddNodeToOpenList(SubproblemStorageType openSubproblems, (SubproblemType, NetworkType) node);
+    /// <summary>
+    /// Checks if the subproblem storage has any subproblems. No need to provide thread safety in the implementation.
+    /// </summary>
+    /// <param name="openSubproblems"></param>
+    /// <returns></returns>
+    protected abstract bool AreThereAnySubproblems(SubproblemStorageType openSubproblems);
 
-    private (SubproblemType, NetworkType)? _popNextOpenSubproblemNodeIfAny(LinkedList<(SubproblemType, NetworkType)> openList)
+    private (SubproblemType, NetworkType)? _popNextOpenSubproblemNodeIfAny(SubproblemStorageType openSubproblems)
     {
         (SubproblemType, NetworkType)? res = null;
-        lock (_subproblemListLock)
+        lock (_subproblemStorageLock)
         {
-            if (openList.Count != 0)
+            if (AreThereAnySubproblems(openSubproblems))
             {
-                res = PopNextOpenSubproblemNode(openList);
+                res = PopNextOpenSubproblemNode(openSubproblems);
             }
         }
         return res;
     }
-    private void _addNodeToOpenList(LinkedList<(SubproblemType, NetworkType)> openList, (SubproblemType, NetworkType) node)
+    private void _addNodeToOpenList(SubproblemStorageType openSubproblems, (SubproblemType, NetworkType) node)
     {
-        lock (_subproblemListLock)
+        lock (_subproblemStorageLock)
         {
-            AddNodeToOpenList(openList, node);
+            AddNodeToOpenList(openSubproblems, node);
         }
     }
 
-    protected virtual void RunLoopSingleThread(LinkedList<(SubproblemType subproblem, NetworkType network)> openSubproblems)
+    private bool _areThereAnySubproblems(SubproblemStorageType openSubproblems)
     {
-        while (openSubproblems.Count > 0)
+        bool res = false;
+        lock (_subproblemStorageLock)
+        {
+            res = AreThereAnySubproblems(openSubproblems);
+        }
+        return res;
+    }
+
+    protected virtual void RunLoopSingleThread(SubproblemStorageType openSubproblems)
+    {
+        while (_areThereAnySubproblems(openSubproblems))
         {
             if (DateTime.Now - _startTime >= _timeLimit) { return; }
             var (subproblem, network) = PopNextOpenSubproblemNode(openSubproblems);
@@ -533,11 +564,11 @@ public abstract class OpenListBranchAndBoundBase<PNSProblemType, SubproblemType,
         }
     }
 
-    protected virtual void RunLoopMultipleThread(LinkedList<(SubproblemType subproblem, NetworkType network)> openSubproblems)
+    protected virtual void RunLoopMultipleThread(SubproblemStorageType openSubproblems)
     {
         // TODO
         int threadsWorking = 0;
-        
+
         EventWaitHandle controlHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
         bool shouldEnd = false;
 
@@ -557,7 +588,7 @@ public abstract class OpenListBranchAndBoundBase<PNSProblemType, SubproblemType,
                     return;
                 }
                 (SubproblemType, NetworkType)? nextSubproblem = null;
-                lock (_subproblemListLock)
+                lock (_subproblemStorageLock)
                 {
                     nextSubproblem = _popNextOpenSubproblemNodeIfAny(openSubproblems);
                 }
@@ -629,7 +660,7 @@ public abstract class OpenListBranchAndBoundBase<PNSProblemType, SubproblemType,
         if (unitsToConsider.Count == 0) { return; }
         SubproblemType rootSubProblem = SubproblemType.InitializeRoot(_problem, unitsToConsider);
 
-        LinkedList<(SubproblemType subproblem, NetworkType network)> openSubproblems = new();
+        SubproblemStorageType openSubproblems = new();
         {
             if (rootSubProblem.IsErrorFree == false) { return; }
             NetworkType? boundNetwork = _boundingFunction(rootSubProblem);
@@ -639,7 +670,7 @@ public abstract class OpenListBranchAndBoundBase<PNSProblemType, SubproblemType,
                 SaveSolutionAndUpdate(boundNetwork);
                 return;
             }
-            openSubproblems.AddLast((rootSubProblem, boundNetwork));
+            _addNodeToOpenList(openSubproblems, (rootSubProblem, boundNetwork));
         }
         if (_threadCount == 1)
         {
@@ -649,6 +680,36 @@ public abstract class OpenListBranchAndBoundBase<PNSProblemType, SubproblemType,
         {
             RunLoopMultipleThread(openSubproblems);
         }
+    }
+}
+
+/// <summary>
+/// Generic open-list-based implementation of branch-and-bound algorithms. Supports multi-threaded operation. Derived classes need to define how subproblems are inserted and removed from the open list.
+/// </summary>
+/// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+/// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+/// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
+public abstract class OpenListBranchAndBoundBase<PNSProblemType, SubproblemType, NetworkType> : OpenSubproblemBranchAndBoundBase<PNSProblemType, SubproblemType, NetworkType, LinkedList<(SubproblemType, NetworkType)>>
+    where PNSProblemType : PNSProblemBase
+    where SubproblemType : SubproblemBase<PNSProblemType>, ISubproblemInitializer<PNSProblemType, SubproblemType>
+    where NetworkType : NetworkBase, IComparable<NetworkType>
+{
+    /// <summary>
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="branchingFunction">Branching function defining how the children of a subproblem are generated. The branching function takes a subproblem and return the collection of children subproblems. Can support lazy evaluation.</param>
+    /// <param name="boundingFunction">Bounding function defining how the value and feasibility of a subproblem is evaluated. The bounding function takes a subproblem and returns a network containing the bounding data, of null if the subproblem is infeasible.</param>
+    /// <param name="maxSolutions">Number of n-best solutions to generate. Default value: 1. The value -1 will result in generating all feasible solutions.</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
+    /// <param name="timeLimit">Time limit for generating the solutions</param>
+    /// <param name="threadCount">Number of threads to use while running the algorithm</param>
+    public OpenListBranchAndBoundBase(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingFunction, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+    }
+    protected override bool AreThereAnySubproblems(LinkedList<(SubproblemType, NetworkType)> openSubproblems)
+    {
+        return openSubproblems.Count > 0;
     }
 }
 public static class DefaultMethods
