@@ -22,14 +22,17 @@ The overall algorithm is defined by the class you instantiate, while the others 
 The library contains 3 main overall algorithms in 2 groups:
 - Recursive method call-based operation, which generates child subproblems and recursively calls the main logic on each of them. This is inherently a depth-first search, and does not support multi-threaded operation. The current version of the library implements this via the class:
   - **RecursiveBranchAndBoundAlgorithm**
-- Open subproblem list-based operation, where generated child subproblems are added to a subproblem list and when a new subproblem is examined, it is taken from this list. The logic of the list can be configured, and supports multi-threaded operation. The current version of the library has two implementations:
-  - **DepthFirstOpenListBranchAndBoundAlgorithm**: the subproblem list implements a LIFO storage
-  - **OrderedOpenListBranchAndBoundAlgorithm**: the subproblem are ordered based on a default or configurable comparator, and always the first (lowest value / best) subproblem is evaluated next. Implements A* algorithm with proper bounding logic.
-  - More can be created by subclassing OpenListBranchAndBoundBase and implementing the two necessary methods
+- Open subproblem storage-based operation, where generated child subproblems are added to a subproblem storage and when a new subproblem is examined, it is taken from this storage. The type and logic of the storage can be configured, and supports multi-threaded operation. The current version of the library has three implementations:
+  - **DepthFirstOpenListBranchAndBoundAlgorithm**: the subproblem list implements a LIFO storage with LinkedList
+  - **OrderedOpenListBranchAndBoundAlgorithm**: the subproblem LinkedList is ordered based on a default or configurable comparator, and always the first (lowest value / best) subproblem is evaluated next. Implements A* algorithm with proper bounding logic.
+  - **PriorityQueueBranchAndBoundAlgorithm**: the subproblems are stored in a PriorityQueue.
+  - More can be created by subclassing OpenListBranchAndBoundBase or OpenSubproblemBranchAndBoundBase and implementing the two or three necessary methods
 - Furthermore, the CommonImplementations static class contains some derived classes for more specific use-cases:
   - **CommonImplementations.AlgorithmABBRecursive**: Derived from RecursiveBranchAndBoundAlgorithm, the branching logic is fixed to ABB logic
   - **CommonImplementations.AlgorithmABBDepthFirstOpenList**: Derived from DepthFirstOpenListBranchAndBoundAlgorithm, the branching logic is fixed to ABB logic
   - **CommonImplementations.AlgorithmABBOrderedOpenList**: Derived from OrderedOpenListBranchAndBoundAlgorithm, the branching logic is fixed to ABB logic
+  - **CommonImplementations.AlgorithmABBPriorityQueue**: Derived from PriorityQueueBranchAndBoundAlgorithm, the branching logic is fixed to ABB logic
+
 
 The branching logic consists of two parts: the representation of the subproblem and the logic to generate child subproblems.
 For now, we will not go into details about writing branching logic, that is a topic for a later example.

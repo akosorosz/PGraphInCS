@@ -420,4 +420,21 @@ public static class CommonImplementations
         }
     }
 
+    /// <summary>
+    /// Algorithm ABB with priority queue implementation.
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+    /// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
+    public class AlgorithmABBPriorityQueue<PNSProblemType, NetworkType> : PriorityQueueBranchAndBoundAlgorithm<PNSProblemType, ABBSubproblem<PNSProblemType>, NetworkType>
+        where PNSProblemType : PNSProblemBase
+        where NetworkType : NetworkBase, IComparable<NetworkType>
+    {
+
+        public AlgorithmABBPriorityQueue(PNSProblemType problem, Func<ABBSubproblem<PNSProblemType>, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+            : base(problem, CommonImplementations.ABBBranching, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+        {
+            this.SetBranchingExtensions(CommonImplementations.DefaultBranchingExtensionsForABB<PNSProblemType, ABBSubproblem<PNSProblemType>>());
+        }
+    }
+
 }

@@ -488,18 +488,21 @@ public abstract class OpenSubproblemBranchAndBoundBase<PNSProblemType, Subproble
         : base(problem, branchingFunction, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
     {
     }
+
     /// <summary>
     /// Pops the next subproblem to be examined. No need to provide thread safety in the implementation.
     /// </summary>
     /// <param name="openSubproblems"></param>
     /// <returns></returns>
     protected abstract (SubproblemType, NetworkType) PopNextOpenSubproblemNode(SubproblemStorageType openSubproblems);
+
     /// <summary>
     /// Adds the new subproblem to the subproblem storage. No need to provide thread safety in the implementation.
     /// </summary>
     /// <param name="openSubproblems"></param>
     /// <param name="node"></param>
     protected abstract void AddNodeToOpenList(SubproblemStorageType openSubproblems, (SubproblemType, NetworkType) node);
+
     /// <summary>
     /// Checks if the subproblem storage has any subproblems. No need to provide thread safety in the implementation.
     /// </summary>
@@ -792,5 +795,40 @@ public class DepthFirstOpenListBranchAndBoundAlgorithm<PNSProblemType, Subproble
     protected override void AddNodeToOpenList(LinkedList<(SubproblemType, NetworkType)> openList, (SubproblemType, NetworkType) node)
     {
         openList.AddFirst(node);
+    }
+}
+
+
+/// <summary>
+/// Priority queue-based implementation of branch-and-bound algorithms. Supports multi-threaded operation.
+/// </summary>
+/// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+/// <typeparam name="SubproblemType">Type to represent subproblems</typeparam>
+/// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
+public class PriorityQueueBranchAndBoundAlgorithm<PNSProblemType, SubproblemType, NetworkType> : OpenSubproblemBranchAndBoundBase<PNSProblemType, SubproblemType, NetworkType, PriorityQueue<SubproblemType, NetworkType>>
+    where PNSProblemType : PNSProblemBase
+    where SubproblemType : SubproblemBase<PNSProblemType>, ISubproblemInitializer<PNSProblemType, SubproblemType>
+    where NetworkType : NetworkBase, IComparable<NetworkType>
+{
+
+    public PriorityQueueBranchAndBoundAlgorithm(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingFunction, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+    }
+
+    protected override void AddNodeToOpenList(PriorityQueue<SubproblemType, NetworkType> openSubproblems, (SubproblemType, NetworkType) node)
+    {
+        openSubproblems.Enqueue(node.Item1, node.Item2);
+    }
+
+    protected override bool AreThereAnySubproblems(PriorityQueue<SubproblemType, NetworkType> openSubproblems)
+    {
+        return openSubproblems.Count > 0;
+    }
+
+    protected override (SubproblemType, NetworkType) PopNextOpenSubproblemNode(PriorityQueue<SubproblemType, NetworkType> openSubproblems)
+    {
+        openSubproblems.TryDequeue(out SubproblemType? subproblem, out NetworkType? network);
+        return (subproblem!, network!);
     }
 }
