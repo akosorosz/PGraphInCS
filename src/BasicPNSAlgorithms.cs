@@ -335,6 +335,14 @@ public interface ISubpoblemWithIncludedExcludedGetSet : ISubpoblemWithIncludedEx
 {
 }
 
+public interface IBranchingLogic<PNSProblemType, SubproblemType>
+    where PNSProblemType : PNSProblemBase
+    where SubproblemType : SubproblemBase<PNSProblemType>
+{
+    IEnumerable<SubproblemType> BranchingFunction(SubproblemType subproblem);
+    SubproblemType RootInitializer(PNSProblemType problem, OperatingUnitSet? baseUnitSet);
+}
+
 /// <summary>
 /// Basic class for all subproblem-based branch-and-bound algorithms. Defines the types of the PNS problem, the subproblem representation and the solution network representation. Provides standardized handling of the branching and bounding algorithms, as well as options for extending any branching algorithms with additional logic.
 /// </summary>
@@ -350,6 +358,7 @@ public abstract class SubproblemBasedBranchAndBoundBase<PNSProblemType, Subprobl
     private List<Func<SubproblemType,bool>> _branchingExtensions = new();
 
     protected Func<SubproblemType, NetworkType?> _boundingFunction;
+    protected Func<PNSProblemType, OperatingUnitSet?, SubproblemType> _rootInitializer;
 
     /// <summary>
     /// </summary>
@@ -365,6 +374,43 @@ public abstract class SubproblemBasedBranchAndBoundBase<PNSProblemType, Subprobl
     {
         this._rawBranchingFunction = branchingFunction;
         this._boundingFunction = boundingFunction;
+        this._rootInitializer = SubproblemType.InitializeRoot;
+    }
+
+    /// <summary>
+    /// This constructor is used when the default root initialization of the subproblem type is not sufficient.
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="branchingFunction">Branching function defining how the children of a subproblem are generated. The branching function takes a subproblem and return the collection of children subproblems. Can support lazy evaluation.</param>
+    /// <param name="rootInitializer">Function defining how the root subproblem is initialized.</param>
+    /// <param name="boundingFunction">Bounding function defining how the value and feasibility of a subproblem is evaluated. The bounding function takes a subproblem and returns a network containing the bounding data, of null if the subproblem is infeasible.</param>
+    /// <param name="maxSolutions">Number of n-best solutions to generate. Default value: 1. The value -1 will result in generating all feasible solutions.</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
+    /// <param name="timeLimit">Time limit for generating the solutions</param>
+    /// <param name="threadCount">Number of threads to use while running the algorithm</param>
+    public SubproblemBasedBranchAndBoundBase(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<PNSProblemType, OperatingUnitSet?, SubproblemType> rootInitializer, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+        this._rawBranchingFunction = branchingFunction;
+        this._boundingFunction = boundingFunction;
+        this._rootInitializer = rootInitializer;
+    }
+
+    /// <summary>
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="branchingLogic">Branching logic defining both the branching function and the root initialization</param>
+    /// <param name="boundingFunction">Bounding function defining how the value and feasibility of a subproblem is evaluated. The bounding function takes a subproblem and returns a network containing the bounding data, of null if the subproblem is infeasible.</param>
+    /// <param name="maxSolutions">Number of n-best solutions to generate. Default value: 1. The value -1 will result in generating all feasible solutions.</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
+    /// <param name="timeLimit">Time limit for generating the solutions</param>
+    /// <param name="threadCount">Number of threads to use while running the algorithm</param>
+    public SubproblemBasedBranchAndBoundBase(PNSProblemType problem, IBranchingLogic<PNSProblemType, SubproblemType> branchingLogic, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+        this._rawBranchingFunction = branchingLogic.BranchingFunction;
+        this._boundingFunction = boundingFunction;
+        this._rootInitializer = branchingLogic.RootInitializer;
     }
 
     /// <summary>
@@ -425,13 +471,41 @@ public class RecursiveBranchAndBoundAlgorithm<PNSProblemType, SubproblemType, Ne
     {
     }
 
+    /// <summary>
+    /// This constructor is used when the default root initialization of the subproblem type is not sufficient.
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="branchingFunction">Branching function defining how the children of a subproblem are generated. The branching function takes a subproblem and return the collection of children subproblems. Can support lazy evaluation.</param>
+    /// <param name="rootInitializer">Function defining how the root subproblem is initialized.</param>
+    /// <param name="boundingFunction">Bounding function defining how the value and feasibility of a subproblem is evaluated. The bounding function takes a subproblem and returns a network containing the bounding data, of null if the subproblem is infeasible.</param>
+    /// <param name="maxSolutions">Number of n-best solutions to generate. Default value: 1. The value -1 will result in generating all feasible solutions.</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
+    /// <param name="timeLimit">Time limit for generating the solutions</param>
+    public RecursiveBranchAndBoundAlgorithm(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<PNSProblemType, OperatingUnitSet?, SubproblemType> rootInitializer, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null)
+        : base(problem, branchingFunction, rootInitializer, boundingFunction, maxSolutions, baseUnitSet, timeLimit)
+    {
+    }
+
+    /// <summary>
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="branchingLogic">Branching logic defining both the branching function and the root initialization</param>
+    /// <param name="boundingFunction">Bounding function defining how the value and feasibility of a subproblem is evaluated. The bounding function takes a subproblem and returns a network containing the bounding data, of null if the subproblem is infeasible.</param>
+    /// <param name="maxSolutions">Number of n-best solutions to generate. Default value: 1. The value -1 will result in generating all feasible solutions.</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
+    /// <param name="timeLimit">Time limit for generating the solutions</param>
+    public RecursiveBranchAndBoundAlgorithm(PNSProblemType problem, IBranchingLogic<PNSProblemType, SubproblemType> branchingLogic, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null)
+        : base(problem, branchingLogic, boundingFunction, maxSolutions, baseUnitSet, timeLimit)
+    {
+    }
+
     protected override void Run()
     {
         this._solutionNetworks!.Clear();
         AlgorithmMSG msg = new AlgorithmMSG(_problem,_baseUnitSet);
         OperatingUnitSet unitsToConsider = msg.GetMaximalStructure();
         if (unitsToConsider.Count == 0) { return; }
-        SubproblemType rootSubProblem = SubproblemType.InitializeRoot(_problem, unitsToConsider);
+        SubproblemType rootSubProblem = _rootInitializer(_problem, unitsToConsider);
         recursiveSteps(rootSubProblem);
     }
 
@@ -486,6 +560,36 @@ public abstract class OpenSubproblemBranchAndBoundBase<PNSProblemType, Subproble
     /// <param name="threadCount">Number of threads to use while running the algorithm</param>
     public OpenSubproblemBranchAndBoundBase(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
         : base(problem, branchingFunction, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+    }
+
+    /// <summary>
+    /// This constructor is used when the default root initialization of the subproblem type is not sufficient.
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="branchingFunction">Branching function defining how the children of a subproblem are generated. The branching function takes a subproblem and return the collection of children subproblems. Can support lazy evaluation.</param>
+    /// <param name="rootInitializer">Function defining how the root subproblem is initialized.</param>
+    /// <param name="boundingFunction">Bounding function defining how the value and feasibility of a subproblem is evaluated. The bounding function takes a subproblem and returns a network containing the bounding data, of null if the subproblem is infeasible.</param>
+    /// <param name="maxSolutions">Number of n-best solutions to generate. Default value: 1. The value -1 will result in generating all feasible solutions.</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
+    /// <param name="timeLimit">Time limit for generating the solutions</param>
+    /// <param name="threadCount">Number of threads to use while running the algorithm</param>
+    public OpenSubproblemBranchAndBoundBase(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<PNSProblemType, OperatingUnitSet?, SubproblemType> rootInitializer, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingFunction, rootInitializer, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+    }
+
+    /// <summary>
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="branchingLogic">Branching logic defining both the branching function and the root initialization</param>
+    /// <param name="boundingFunction">Bounding function defining how the value and feasibility of a subproblem is evaluated. The bounding function takes a subproblem and returns a network containing the bounding data, of null if the subproblem is infeasible.</param>
+    /// <param name="maxSolutions">Number of n-best solutions to generate. Default value: 1. The value -1 will result in generating all feasible solutions.</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
+    /// <param name="timeLimit">Time limit for generating the solutions</param>
+    /// <param name="threadCount">Number of threads to use while running the algorithm</param>
+    public OpenSubproblemBranchAndBoundBase(PNSProblemType problem, IBranchingLogic<PNSProblemType, SubproblemType> branchingLogic, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingLogic, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
     {
     }
 
@@ -661,7 +765,7 @@ public abstract class OpenSubproblemBranchAndBoundBase<PNSProblemType, Subproble
         AlgorithmMSG msg = new AlgorithmMSG(_problem, _baseUnitSet);
         OperatingUnitSet unitsToConsider = msg.GetMaximalStructure();
         if (unitsToConsider.Count == 0) { return; }
-        SubproblemType rootSubProblem = SubproblemType.InitializeRoot(_problem, unitsToConsider);
+        SubproblemType rootSubProblem = _rootInitializer(_problem, unitsToConsider);
 
         SubproblemStorageType openSubproblems = new();
         {
@@ -710,6 +814,37 @@ public abstract class OpenListBranchAndBoundBase<PNSProblemType, SubproblemType,
         : base(problem, branchingFunction, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
     {
     }
+
+    /// <summary>
+    /// This constructor is used when the default root initialization of the subproblem type is not sufficient.
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="branchingFunction">Branching function defining how the children of a subproblem are generated. The branching function takes a subproblem and return the collection of children subproblems. Can support lazy evaluation.</param>
+    /// <param name="rootInitializer">Function defining how the root subproblem is initialized.</param>
+    /// <param name="boundingFunction">Bounding function defining how the value and feasibility of a subproblem is evaluated. The bounding function takes a subproblem and returns a network containing the bounding data, of null if the subproblem is infeasible.</param>
+    /// <param name="maxSolutions">Number of n-best solutions to generate. Default value: 1. The value -1 will result in generating all feasible solutions.</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
+    /// <param name="timeLimit">Time limit for generating the solutions</param>
+    /// <param name="threadCount">Number of threads to use while running the algorithm</param>
+    public OpenListBranchAndBoundBase(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<PNSProblemType, OperatingUnitSet?, SubproblemType> rootInitializer, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingFunction, rootInitializer, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+    }
+
+    /// <summary>
+    /// </summary>
+    /// <param name="problem">PNS problem containing operating units and materials</param>
+    /// <param name="branchingLogic">Branching logic defining both the branching function and the root initialization</param>
+    /// <param name="boundingFunction">Bounding function defining how the value and feasibility of a subproblem is evaluated. The bounding function takes a subproblem and returns a network containing the bounding data, of null if the subproblem is infeasible.</param>
+    /// <param name="maxSolutions">Number of n-best solutions to generate. Default value: 1. The value -1 will result in generating all feasible solutions.</param>
+    /// <param name="baseUnitSet">Limits the algorithm to consider only a subset of operating units. Default: null, which means to consider all operating units in the PNS problem.</param>
+    /// <param name="timeLimit">Time limit for generating the solutions</param>
+    /// <param name="threadCount">Number of threads to use while running the algorithm</param>
+    public OpenListBranchAndBoundBase(PNSProblemType problem, IBranchingLogic<PNSProblemType, SubproblemType> branchingLogic, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingLogic, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+    }
+
     protected override bool AreThereAnySubproblems(LinkedList<(SubproblemType, NetworkType)> openSubproblems)
     {
         return openSubproblems.Count > 0;
@@ -749,6 +884,28 @@ public class OrderedOpenListBranchAndBoundAlgorithm<PNSProblemType, SubproblemTy
         this._networkComparator = networkComparator;
     }
 
+    public OrderedOpenListBranchAndBoundAlgorithm(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<PNSProblemType, OperatingUnitSet?, SubproblemType> rootInitializer, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingFunction, rootInitializer, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+    }
+
+    public OrderedOpenListBranchAndBoundAlgorithm(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<PNSProblemType, OperatingUnitSet?, SubproblemType> rootInitializer, Func<SubproblemType, NetworkType?> boundingFunction, Comparison<(SubproblemType, NetworkType)> networkComparator, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingFunction, rootInitializer, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+        this._networkComparator = networkComparator;
+    }
+
+    public OrderedOpenListBranchAndBoundAlgorithm(PNSProblemType problem, IBranchingLogic<PNSProblemType, SubproblemType> branchingLogic, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingLogic, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+    }
+
+    public OrderedOpenListBranchAndBoundAlgorithm(PNSProblemType problem, IBranchingLogic<PNSProblemType, SubproblemType> branchingLogic, Func<SubproblemType, NetworkType?> boundingFunction, Comparison<(SubproblemType, NetworkType)> networkComparator, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingLogic, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+        this._networkComparator = networkComparator;
+    }
+
     protected override (SubproblemType, NetworkType) PopNextOpenSubproblemNode(LinkedList<(SubproblemType, NetworkType)> openList)
     {
         var node = openList.First!.Value;
@@ -784,6 +941,14 @@ public class DepthFirstOpenListBranchAndBoundAlgorithm<PNSProblemType, Subproble
         : base(problem, branchingFunction, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
     {
     }
+    public DepthFirstOpenListBranchAndBoundAlgorithm(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<PNSProblemType, OperatingUnitSet?, SubproblemType> rootInitializer, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingFunction, rootInitializer, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+    }
+    public DepthFirstOpenListBranchAndBoundAlgorithm(PNSProblemType problem, IBranchingLogic<PNSProblemType, SubproblemType> branchingLogic, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingLogic, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+    }
 
     protected override (SubproblemType, NetworkType) PopNextOpenSubproblemNode(LinkedList<(SubproblemType, NetworkType)> openList)
     {
@@ -813,6 +978,14 @@ public class PriorityQueueBranchAndBoundAlgorithm<PNSProblemType, SubproblemType
 
     public PriorityQueueBranchAndBoundAlgorithm(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
         : base(problem, branchingFunction, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+    }
+    public PriorityQueueBranchAndBoundAlgorithm(PNSProblemType problem, Func<SubproblemType, IEnumerable<SubproblemType>> branchingFunction, Func<PNSProblemType, OperatingUnitSet?, SubproblemType> rootInitializer, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingFunction, rootInitializer, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+    {
+    }
+    public PriorityQueueBranchAndBoundAlgorithm(PNSProblemType problem, IBranchingLogic<PNSProblemType, SubproblemType> branchingLogic, Func<SubproblemType, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+        : base(problem, branchingLogic, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
     {
     }
 
