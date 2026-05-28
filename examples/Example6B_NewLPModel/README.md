@@ -83,7 +83,7 @@ There is no built-in codebase to make this simple, but we can copy the built-in 
 
 Building the model takes several steps. First, there are the initializations. Here we also get the sum of the already included fix costs, as we can use that for sharper cost limit
 
-    _modelSolver = Solver.CreateSolver("SCIP");
+    _modelSolver = Solver.CreateSolver("GLOP");
     MaterialSet materialsToWorkWith = unitsToWorkWith.Inputs().Union(unitsToWorkWith.Outputs());
     
     _includedFixCosts = unitsAlreadyIncluded.Cast<LinearOperatingUnitNode>().Sum(u => u.FixOperatingCost + u.FixInvestmentCost / u.PayoutPeriod);
@@ -102,16 +102,23 @@ Building the model takes several steps. First, there are the initializations. He
     
 We have a constraint for each material which need the proper lower and upper bounds. There are no variables for the materials in this model.
     
+    MaterialSet materialsWithBounds = problem.Intermediates.Clone();
+    materialsWithBounds.IntersectWith(unitsAlreadyIncluded.Inputs().Union(unitsAlreadyIncluded.Outputs()));
+    materialsWithBounds.UnionWith(problem.RawMaterials);
+    materialsWithBounds.UnionWith(problem.Products);
+
     _materialConstraints = new();
     foreach (var material in materialsToWorkWith.Cast<LinearMaterialNode>())
     {
+        double lb = materialsWithBounds.Contains(material) ? material.FlowRateLowerBound : 0.0;
+        double ub = material.FlowRateUpperBound;
         if (problem.RawMaterials.Contains(material))
         {
-            _materialConstraints.Add(material, _modelSolver.MakeConstraint(-material.FlowRateUpperBound, -material.FlowRateLowerBound, "m_" + material.Name));
+            _materialConstraints.Add(material, _modelSolver.MakeConstraint(-ub, -lb, "m_" + material.Name));
         }
         else
         {
-            _materialConstraints.Add(material, _modelSolver.MakeConstraint(material.FlowRateLowerBound, material.FlowRateUpperBound, "m_" + material.Name));
+            _materialConstraints.Add(material, _modelSolver.MakeConstraint(lb, ub, "m_" + material.Name));
         }
     }
     
@@ -121,7 +128,8 @@ Let's make a proper calculation of CO2 production here: consumed raw materials a
     _unitSizeVars = new();
     foreach (var unit in unitsToWorkWith.Cast<LinearOperatingUnitNode>())
     {
-        var unitVar = _modelSolver.MakeNumVar(unit.CapacityLowerBound, unit.CapacityUpperBound, "x_" + unit.Name);
+        double lb = unitsAlreadyIncluded.Contains(unit) ? unit.CapacityLowerBound : 0.0;
+        var unitVar = _modelSolver.MakeNumVar(lb, unit.CapacityUpperBound, "x_" + unit.Name);
         _unitSizeVars.Add(unit, unitVar);
         double realUnitCost = unit.ProportionalOperatingCost + unit.ProportionalInvestmentCost / unit.PayoutPeriod;
         foreach (var (material, ratio) in unit.InputRatios)

@@ -32,7 +32,7 @@ public static class CommonImplementations
             Excluded = excluded.Clone();
         }
         public override bool IsLeaf => ToBeProduced.Count == 0;
-        public override bool IsErrorFree => Included.Intersect(Excluded).Any() == false && Problem.MaterialsWithParallelProductionLimit.All(m => Problem.Producers[m].Intersect(Included).Count <= Problem.MaxParallelProduction[m]);
+        public override bool IsErrorFree => Included.Intersect(Excluded).Any() == false && Problem.IsAnyMaxParallelProductionViolatedByUnits(Included) == false;
         public static ABBSubproblem<PNSProblemType> InitializeRoot(PNSProblemType problem, OperatingUnitSet? baseUnitSet)
         {
             OperatingUnitSet unitToConsider = baseUnitSet != null ? baseUnitSet : problem.OperatingUnits;
@@ -132,7 +132,7 @@ public static class CommonImplementations
         }
         private void CheckForErrors()
         {
-            _isErrorFree = Included.Intersect(Excluded).Any() == false && Problem.MaterialsWithParallelProductionLimit.All(m => Problem.Producers[m].Intersect(Included).Count <= Problem.MaxParallelProduction[m]);
+            _isErrorFree = Included.Intersect(Excluded).Any() == false && Problem.IsAnyMaxParallelProductionViolatedByUnits(Included) == false;
             if (_isErrorFree && Undecided.Count == 0)
             {
                 AlgorithmMSG msg = new(Problem, Included);
@@ -206,7 +206,7 @@ public static class CommonImplementations
                 OperatingUnitNode newUnit = canProduce.First();
                 if (canProduce.Count == 1 && !included.Contains(newUnit))
                 {
-                    if (newUnit.Outputs.Intersect(subproblem.Problem.MaterialsWithParallelProductionLimit).Any(m => subproblem.Problem.Producers[m].Intersect(included).Count >= subproblem.Problem.MaxParallelProduction[m]))
+                    if (newUnit.Outputs.Intersect(subproblem.Problem.MaterialsWithParallelProductionLimit).Any(m => subproblem.Problem.Producers[m].Intersect(included).Count > subproblem.Problem.MaxParallelProduction[m]))
                     {
                         // This means that the subproblem has no feasbile leaf descendants (this unit must be added, but cannot).
                         return false;
@@ -276,7 +276,7 @@ public static class CommonImplementations
                 else if (canProduce.Count == 1 && canProduceNew.Count == 1)
                 {
                     OperatingUnitNode newUnit = canProduceNew.First();
-                    if (newUnit.Outputs.Intersect(subproblem.Problem.MaterialsWithParallelProductionLimit).Any(m => subproblem.Problem.Producers[m].Intersect(subproblem.Included).Count >= subproblem.Problem.MaxParallelProduction[m]))
+                    if (newUnit.Outputs.Intersect(subproblem.Problem.MaterialsWithParallelProductionLimit).Any(m => subproblem.Problem.Producers[m].Intersect(subproblem.Included).Count > subproblem.Problem.MaxParallelProduction[m]))
                     {
                         // This means that the subproblem has no feasbile leaf descendants (this unit must be added, but cannot).
                         return false;
@@ -323,7 +323,7 @@ public static class CommonImplementations
         where SubproblemType : SubproblemBase<LinearPNS.Efficient.LinearPNSProblem>, ISubpoblemWithIncludedExcludedGet
     {
         OperatingUnitSet unitsToUseInLp = subproblem.IsLeaf ? subproblem.GetIncludedUnits() : subproblem.Problem.OperatingUnits.Except(subproblem.GetExcludedUnits());
-        LinearPNS.Efficient.SimpleLinearPNSLPModel lpmodel = new LinearPNS.Efficient.SimpleLinearPNSLPModel(subproblem.Problem, unitsToUseInLp);
+        LinearPNS.Efficient.SimpleLinearPNSLPModel lpmodel = new LinearPNS.Efficient.SimpleLinearPNSLPModel(subproblem.Problem, unitsToUseInLp, subproblem.GetIncludedUnits());
         if (!lpmodel.Solve())
         {
             return null;
@@ -348,7 +348,7 @@ public static class CommonImplementations
         where SubproblemType : SubproblemBase<LinearPNS.Flexible.LinearPNSProblem>, ISubpoblemWithIncludedExcludedGet
     {
         OperatingUnitSet unitsToUseInLp = subproblem.IsLeaf ? subproblem.GetIncludedUnits() : subproblem.Problem.OperatingUnits.Except(subproblem.GetExcludedUnits());
-        LinearPNS.Flexible.SimpleLinearPNSLPModel lpmodel = new LinearPNS.Flexible.SimpleLinearPNSLPModel(subproblem.Problem, unitsToUseInLp);
+        LinearPNS.Flexible.SimpleLinearPNSLPModel lpmodel = new LinearPNS.Flexible.SimpleLinearPNSLPModel(subproblem.Problem, unitsToUseInLp, subproblem.GetIncludedUnits());
         if (!lpmodel.Solve())
         {
             return null;
@@ -414,6 +414,23 @@ public static class CommonImplementations
     {
 
         public AlgorithmABBDepthFirstOpenList(PNSProblemType problem, Func<ABBSubproblem<PNSProblemType>, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
+            : base(problem, CommonImplementations.ABBBranching, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
+        {
+            this.SetBranchingExtensions(CommonImplementations.DefaultBranchingExtensionsForABB<PNSProblemType, ABBSubproblem<PNSProblemType>>());
+        }
+    }
+
+    /// <summary>
+    /// Algorithm ABB with priority queue implementation.
+    /// </summary>
+    /// <typeparam name="PNSProblemType">Type of the PNS problem</typeparam>
+    /// <typeparam name="NetworkType">Type of the networks representing the solutions</typeparam>
+    public class AlgorithmABBPriorityQueue<PNSProblemType, NetworkType> : PriorityQueueBranchAndBoundAlgorithm<PNSProblemType, ABBSubproblem<PNSProblemType>, NetworkType>
+        where PNSProblemType : PNSProblemBase
+        where NetworkType : NetworkBase, IComparable<NetworkType>
+    {
+
+        public AlgorithmABBPriorityQueue(PNSProblemType problem, Func<ABBSubproblem<PNSProblemType>, NetworkType?> boundingFunction, int maxSolutions = 1, OperatingUnitSet? baseUnitSet = null, TimeSpan? timeLimit = null, int threadCount = 1)
             : base(problem, CommonImplementations.ABBBranching, boundingFunction, maxSolutions, baseUnitSet, timeLimit, threadCount)
         {
             this.SetBranchingExtensions(CommonImplementations.DefaultBranchingExtensionsForABB<PNSProblemType, ABBSubproblem<PNSProblemType>>());

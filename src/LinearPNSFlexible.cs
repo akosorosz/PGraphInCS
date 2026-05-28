@@ -410,7 +410,7 @@ public class LinearPNSProblem : SimplePNSProblem
 
                     double minCap = double.Parse(getValueOrDefault(unitProperties, "capacity_lower_bound", "operating_unit_capacity_lower_bound"));
                     double maxCap = double.Parse(getValueOrDefault(unitProperties, "capacity_upper_bound", "operating_unit_capacity_upper_bound"));
-                    double fixCost = double.Parse(getValueOrDefault(unitProperties, "fix_cost", "proportional_cost"));
+                    double fixCost = double.Parse(getValueOrDefault(unitProperties, "fix_cost", "operating_unit_fix_cost"));
                     double propCost = double.Parse(getValueOrDefault(unitProperties, "proportional_cost", "operating_unit_proportional_cost"));
 
                     OperatingUnitNode unit = new(unitName);
@@ -1163,9 +1163,9 @@ public class SimpleLinearPNSLPModel
 
     bool _solved = false;
 
-    public SimpleLinearPNSLPModel(LinearPNSProblem problem, OperatingUnitSet? baseUnitSet = null)
+    public SimpleLinearPNSLPModel(LinearPNSProblem problem, OperatingUnitSet? baseUnitSet = null, OperatingUnitSet? alreadyIncluded = null)
     {
-        _modelSolver = Solver.CreateSolver("SCIP");
+        _modelSolver = Solver.CreateSolver("GLOP");
         OperatingUnitSet unitsToWorkWith = new OperatingUnitSet(problem.OperatingUnits);
         if (baseUnitSet != null)
         {
@@ -1173,26 +1173,37 @@ public class SimpleLinearPNSLPModel
         }
         MaterialSet materialsToWorkWith = unitsToWorkWith.Inputs().Union(unitsToWorkWith.Outputs());
 
+        MaterialSet materialsWithBounds = problem.Intermediates.Clone();
+        if (alreadyIncluded != null)
+        {
+            materialsWithBounds.IntersectWith(alreadyIncluded.Inputs().Union(alreadyIncluded.Outputs()));
+        }
+        materialsWithBounds.UnionWith(problem.RawMaterials);
+        materialsWithBounds.UnionWith(problem.Products);
+
         _objective = _modelSolver.Objective();
         _objective.SetMinimization();
 
         _materialConstraints = new();
         foreach (var material in materialsToWorkWith)
         {
+            double lb = materialsWithBounds.Contains(material) ? problem.MaterialData[material].FlowRateLowerBound : 0.0;
+            double ub = problem.MaterialData[material].FlowRateUpperBound;
             if (problem.RawMaterials.Contains(material))
             {
-                _materialConstraints.Add(material, _modelSolver.MakeConstraint(-problem.MaterialData[material].FlowRateUpperBound, -problem.MaterialData[material].FlowRateLowerBound, "m_" + material.Name));
+                _materialConstraints.Add(material, _modelSolver.MakeConstraint(-ub, -lb, "m_" + material.Name));
             }
             else
             {
-                _materialConstraints.Add(material, _modelSolver.MakeConstraint(problem.MaterialData[material].FlowRateLowerBound, problem.MaterialData[material].FlowRateUpperBound, "m_" + material.Name));
+                _materialConstraints.Add(material, _modelSolver.MakeConstraint(lb, ub, "m_" + material.Name));
             }
         }
 
         _unitSizeVars = new();
         foreach (var unit in unitsToWorkWith)
         {
-            var unitVar = _modelSolver.MakeNumVar(problem.OperatingUnitData[unit].CapacityLowerBound, problem.OperatingUnitData[unit].CapacityUpperBound, "x_" + unit.Name);
+            double lb = (alreadyIncluded?.Contains(unit) ?? false) ? problem.OperatingUnitData[unit].CapacityLowerBound : 0.0;
+            var unitVar = _modelSolver.MakeNumVar(lb, problem.OperatingUnitData[unit].CapacityUpperBound, "x_" + unit.Name);
             _unitSizeVars.Add(unit, unitVar);
             double realUnitCost = problem.OperatingUnitData[unit].ProportionalOperatingCost + problem.OperatingUnitData[unit].ProportionalInvestmentCost / problem.OperatingUnitData[unit].PayoutPeriod;
             foreach (var (material, ratio) in problem.InputRatios[unit])
