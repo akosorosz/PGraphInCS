@@ -1151,7 +1151,7 @@ public class SimpleLinearPNSLPModel
         {
             unitsToWorkWith.IntersectWith(baseUnitSet);
         }
-        MaterialSet materialsToWorkWith = unitsToWorkWith.Inputs().Union(unitsToWorkWith.Outputs());
+        MaterialSet materialsToWorkWith = problem.Products.Union(unitsToWorkWith.Inputs()).Union(unitsToWorkWith.Outputs());
 
         _objective = _modelSolver.Objective();
         _objective.SetMinimization();

@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFramework>net9.0</TargetFramework>
 		<PackageId>PGraphInCS</PackageId>
-		<Version>1.1.0</Version>
+		<Version>1.2.1</Version>
 		<Authors>Ákos Orosz</Authors>
 		<Product>PGraphInCS</Product>
 		<Description>A flexible implementation of P-Graph algorithms in C#.</Description>
